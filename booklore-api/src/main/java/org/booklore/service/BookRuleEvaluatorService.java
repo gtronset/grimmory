@@ -572,25 +572,25 @@ public class BookRuleEvaluatorService {
     private Predicate buildGreaterThan(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         return buildComparisonPredicate(rule, cb, root, progressJoin,
                 (field, dateValue) -> cb.greaterThan(field.as(LocalDateTime.class), dateValue),
-                (field, numValue) -> cb.gt(field.as(Double.class), numValue));
+                (field, numValue) -> cb.gt(toNumericExpression(field), numValue));
     }
 
     private Predicate buildGreaterThanEqual(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         return buildComparisonPredicate(rule, cb, root, progressJoin,
                 (field, dateValue) -> cb.greaterThanOrEqualTo(field.as(LocalDateTime.class), dateValue),
-                (field, numValue) -> cb.ge(field.as(Double.class), numValue));
+                (field, numValue) -> cb.ge(toNumericExpression(field), numValue));
     }
 
     private Predicate buildLessThan(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         return buildComparisonPredicate(rule, cb, root, progressJoin,
                 (field, dateValue) -> cb.lessThan(field.as(LocalDateTime.class), dateValue),
-                (field, numValue) -> cb.lt(field.as(Double.class), numValue));
+                (field, numValue) -> cb.lt(toNumericExpression(field), numValue));
     }
 
     private Predicate buildLessThanEqual(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         return buildComparisonPredicate(rule, cb, root, progressJoin,
                 (field, dateValue) -> cb.lessThanOrEqualTo(field.as(LocalDateTime.class), dateValue),
-                (field, numValue) -> cb.le(field.as(Double.class), numValue));
+                (field, numValue) -> cb.le(toNumericExpression(field), numValue));
     }
 
     private Predicate buildComparisonPredicate(Rule rule, CriteriaBuilder cb, Root<BookEntity> root,
@@ -605,6 +605,7 @@ public class BookRuleEvaluatorService {
         if (value instanceof LocalDateTime) {
             return dateComparator.apply(field, (LocalDateTime) value);
         }
+        if (!(value instanceof Number)) return cb.conjunction();
         return numberComparator.apply(field, ((Number) value).doubleValue());
     }
 
@@ -625,7 +626,9 @@ public class BookRuleEvaluatorService {
             return cb.conjunction();
         }
 
-        return cb.between(field.as(Double.class), ((Number) start).doubleValue(), ((Number) end).doubleValue());
+        @SuppressWarnings("unchecked")
+        Expression<Double> numField = (Expression<Double>) (Expression<?>) field;
+        return cb.between(numField, ((Number) start).doubleValue(), ((Number) end).doubleValue());
     }
 
     private Predicate buildIsEmpty(Rule rule, CriteriaQuery<?> query, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
@@ -653,40 +656,62 @@ public class BookRuleEvaluatorService {
 
     private Predicate buildIncludesAny(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         List<String> ruleList = toStringList(rule.getValue());
+        
+        // Map file type values for consistency with database enum values
+        if (rule.getField() == RuleField.FILE_TYPE) {
+            ruleList = ruleList.stream()
+                    .map(this::mapFileTypeValue)
+                    .collect(Collectors.toList());
+        }
 
         if (isArrayField(rule.getField())) {
             return buildArrayFieldPredicate(rule.getField(), ruleList, cb, root, false);
         }
 
-        return buildFieldInPredicate(rule.getField(), field -> field, ruleList, cb, progressJoin);
+        return buildFieldInPredicate(rule.getField(), field -> field, ruleList, cb, root, progressJoin);
     }
 
     private Predicate buildExcludesAll(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         List<String> ruleList = toStringList(rule.getValue());
+        
+        // Map file type values for consistency with database enum values
+        if (rule.getField() == RuleField.FILE_TYPE) {
+            ruleList = ruleList.stream()
+                    .map(this::mapFileTypeValue)
+                    .collect(Collectors.toList());
+        }
 
         if (isArrayField(rule.getField())) {
             return cb.not(buildArrayFieldPredicate(rule.getField(), ruleList, cb, root, false));
         }
 
-        return cb.not(buildFieldInPredicate(rule.getField(), field -> field, ruleList, cb, progressJoin));
+        return cb.not(buildFieldInPredicate(rule.getField(), field -> field, ruleList, cb, root, progressJoin));
     }
 
     private Predicate buildIncludesAll(Rule rule, CriteriaBuilder cb, Root<BookEntity> root, Join<BookEntity, UserBookProgressEntity> progressJoin) {
         List<String> ruleList = toStringList(rule.getValue());
+        
+        // Map file type values for consistency with database enum values
+        if (rule.getField() == RuleField.FILE_TYPE) {
+            ruleList = ruleList.stream()
+                    .map(this::mapFileTypeValue)
+                    .collect(Collectors.toList());
+        }
 
         if (isArrayField(rule.getField())) {
             return buildArrayFieldPredicate(rule.getField(), ruleList, cb, root, true);
         }
 
-        return buildFieldInPredicate(rule.getField(), field -> field, ruleList, cb, progressJoin);
+        return buildFieldInPredicate(rule.getField(), field -> field, ruleList, cb, root, progressJoin);
     }
 
     private Predicate buildFieldInPredicate(RuleField ruleField,
                                             java.util.function.Function<Expression<?>, Expression<?>> fieldTransformer,
                                             List<String> ruleList,
                                             CriteriaBuilder cb,
+                                            Root<BookEntity> root,
                                             Join<BookEntity, UserBookProgressEntity> progressJoin) {
-        Expression<?> field = fieldTransformer.apply(getFieldExpression(ruleField, cb, null, progressJoin));
+        Expression<?> field = fieldTransformer.apply(getFieldExpression(ruleField, cb, root, progressJoin));
         if (field == null) return cb.conjunction();
 
         if (ruleField == RuleField.READ_STATUS) {
@@ -719,7 +744,11 @@ public class BookRuleEvaluatorService {
             case DATE_FINISHED -> progressJoin.get("dateFinished");
             case LAST_READ_TIME -> progressJoin.get("lastReadTime");
             case PERSONAL_RATING -> progressJoin.get("personalRating");
-            case FILE_SIZE -> root.get("fileSizeKb");
+            case FILE_SIZE -> {
+                Join<BookEntity, BookFileEntity> bookFileJoin = root.join("bookFiles", JoinType.LEFT);
+                bookFileJoin.on(cb.isTrue(bookFileJoin.get("isBookFormat")));
+                yield bookFileJoin.get("fileSizeKb");
+            }
             case METADATA_SCORE -> root.get("metadataMatchScore");
             case TITLE -> root.get("metadata").get("title");
             case SUBTITLE -> root.get("metadata").get("subtitle");
@@ -758,8 +787,11 @@ public class BookRuleEvaluatorService {
                 Expression<Float> cbx = cb.coalesce(progressJoin.get("cbxProgressPercent"), 0f);
                 yield cb.function("GREATEST", Float.class, koreader, kobo, pdf, epub, cbx);
             }
-            case FILE_TYPE -> cb.function("SUBSTRING_INDEX", String.class,
-                    root.get("fileName"), cb.literal("."), cb.literal(-1));
+            case FILE_TYPE -> {
+                Join<BookEntity, BookFileEntity> bookFileJoin = root.join("bookFiles", JoinType.LEFT);
+                bookFileJoin.on(cb.isTrue(bookFileJoin.get("isBookFormat")));
+                yield bookFileJoin.get("bookType");
+            }
             default -> null;
         };
     }
@@ -849,7 +881,34 @@ public class BookRuleEvaluatorService {
             return value;
         }
 
-        return value.toString().toLowerCase();
+        if (isNumericField(field)) {
+            try {
+                return Double.parseDouble(value.toString());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        String stringValue = value.toString().toLowerCase();
+        
+        // Map file type values to enum representations (cbr/cbz/cb7 -> cbx, azw -> azw3)
+        if (field == RuleField.FILE_TYPE) {
+            return mapFileTypeValue(stringValue);
+        }
+
+        return stringValue;
+    }
+
+    /**
+     * Maps user-specified file type values to the BookFileType enum values stored in the database.
+     * This matches the frontend mapping logic to ensure consistent filtering behavior.
+     */
+    private String mapFileTypeValue(String uiValue) {
+        String lowerValue = uiValue.toLowerCase();
+        return switch (lowerValue) {
+            case "cbr", "cbz", "cb7" -> "cbx";
+            case "azw" -> "azw3";
+            default -> lowerValue;
+        };
     }
 
     private LocalDateTime parseDate(Object value) {
@@ -876,6 +935,26 @@ public class BookRuleEvaluatorService {
         }
 
         return Collections.singletonList(value.toString());
+    }
+
+    private static final Set<RuleField> NUMERIC_FIELDS = Set.of(
+            RuleField.METADATA_SCORE, RuleField.FILE_SIZE, RuleField.PAGE_COUNT,
+            RuleField.SERIES_NUMBER, RuleField.SERIES_TOTAL, RuleField.AGE_RATING,
+            RuleField.PERSONAL_RATING, RuleField.READING_PROGRESS, RuleField.AUDIOBOOK_DURATION,
+            RuleField.AMAZON_RATING, RuleField.AMAZON_REVIEW_COUNT,
+            RuleField.GOODREADS_RATING, RuleField.GOODREADS_REVIEW_COUNT,
+            RuleField.HARDCOVER_RATING, RuleField.HARDCOVER_REVIEW_COUNT,
+            RuleField.LUBIMYCZYTAC_RATING, RuleField.RANOBEDB_RATING,
+            RuleField.AUDIBLE_RATING, RuleField.AUDIBLE_REVIEW_COUNT
+    );
+
+    private static boolean isNumericField(RuleField field) {
+        return field != null && NUMERIC_FIELDS.contains(field);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Expression<Number> toNumericExpression(Expression<?> expr) {
+        return (Expression<Number>) expr;
     }
 
     private String escapeLike(String value) {

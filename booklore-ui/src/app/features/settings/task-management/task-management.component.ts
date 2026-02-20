@@ -532,6 +532,7 @@ export class TaskManagementComponent implements OnInit, OnDestroy {
       [TaskType.UPDATE_BOOK_RECOMMENDATIONS]: 'pi-sparkles',
       [TaskType.CLEANUP_DELETED_BOOKS]: 'pi-trash',
       [TaskType.SYNC_LIBRARY_FILES]: 'pi-sync',
+      [TaskType.BOOKDROP_PERIODIC_SCANNING]: 'pi-inbox',
       [TaskType.CLEANUP_TEMP_METADATA]: 'pi-file',
       [TaskType.VERIFY_FILE_HASHES]: 'pi-shield'
     };
