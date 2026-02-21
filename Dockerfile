@@ -33,7 +33,7 @@ COPY --from=angular-build /angular-app/dist/booklore/browser /springboot-app/src
 # Inject version into application.yaml using yq
 ARG APP_VERSION=development
 RUN apk add --no-cache yq && \
-    yq eval ".app.version = \"${APP_VERSION}\"" -i /springboot-app/src/main/resources/application.yaml
+    yq eval '.app.version = strenv(APP_VERSION)' -i /springboot-app/src/main/resources/application.yaml
 
 RUN --mount=type=cache,target=/home/gradle/.gradle \
     gradle clean build -x test --no-daemon --parallel
