@@ -1,14 +1,14 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {DynamicDialogRef} from 'primeng/dynamicdialog';
 import {LibraryService} from '../../../book/service/library.service';
-import {Observable} from 'rxjs';
-import {map, shareReplay, switchMap} from 'rxjs/operators';
+import {forkJoin, Observable, of} from 'rxjs';
+import {catchError, distinctUntilChanged, map, shareReplay, switchMap} from 'rxjs/operators';
 import {Button} from 'primeng/button';
 import {AsyncPipe} from '@angular/common';
 import {DashboardScrollerComponent} from '../dashboard-scroller/dashboard-scroller.component';
 import {BookService} from '../../../book/service/book.service';
 import {BookState} from '../../../book/model/state/book-state.model';
-import {Book, ReadStatus} from '../../../book/model/book.model';
+import {Book, BookRecommendation, ReadStatus} from '../../../book/model/book.model';
 import {UserService} from '../../../settings/user-management/user.service';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {TooltipModule} from 'primeng/tooltip';
@@ -151,6 +151,121 @@ export class MainDashboardComponent implements OnInit {
     );
   }
 
+  private getUpNextBooks(maxItems: number, showFirstUnread: boolean = false, sortBy?: string): Observable<Book[]> {
+    return this.bookService.bookState$.pipe(
+      map((state: BookState) => {
+        const books = state.books || [];
+        
+        // Group books by series
+        const seriesMap = new Map<string, Book[]>();
+        books.forEach(book => {
+          if (book.metadata?.seriesName && book.metadata?.seriesNumber != null) {
+            const seriesName = book.metadata.seriesName.toLowerCase().trim();
+            if (!seriesMap.has(seriesName)) {
+              seriesMap.set(seriesName, []);
+            }
+            seriesMap.get(seriesName)!.push(book);
+          }
+        });
+
+        const upNextBooks: Array<{book: Book, lastReadTime: number}> = [];
+
+        // For each series, find the next unread book
+        seriesMap.forEach((seriesBooks) => {
+          // Check if any book in the series has been read or started
+          const hasReadBooks = seriesBooks.some(book =>
+            book.readStatus === ReadStatus.READ ||
+            book.readStatus === ReadStatus.READING ||
+            book.readStatus === ReadStatus.RE_READING ||
+            book.readStatus === ReadStatus.PAUSED ||
+            book.readStatus === ReadStatus.PARTIALLY_READ
+          );
+
+          if (!hasReadBooks) {
+            return; // Skip series with no read books
+          }
+
+          // Sort by series number
+          const sortedBooks = [...seriesBooks].sort((a, b) => {
+            const aNum = a.metadata?.seriesNumber ?? 0;
+            const bNum = b.metadata?.seriesNumber ?? 0;
+            return aNum - bNum;
+          });
+
+          // Find the highest series number that has been read or is currently being read
+          const highestReadNumber = sortedBooks
+            .filter(book =>
+              book.readStatus === ReadStatus.READ ||
+              book.readStatus === ReadStatus.READING ||
+              book.readStatus === ReadStatus.RE_READING ||
+              book.readStatus === ReadStatus.PAUSED ||
+              book.readStatus === ReadStatus.PARTIALLY_READ
+            )
+            .reduce((max, book) => {
+              const num = book.metadata?.seriesNumber ?? 0;
+              return num > max ? num : max;
+            }, 0);
+
+          // Find the next unread book based on mode
+          const nextBook = showFirstUnread
+            ? sortedBooks.find(book => {
+                const isUnread = !book.readStatus ||
+                  book.readStatus === ReadStatus.UNREAD ||
+                  book.readStatus === ReadStatus.UNSET;
+                return isUnread;
+              })
+            : sortedBooks.find(book => {
+                const bookNum = book.metadata?.seriesNumber ?? 0;
+                const isUnread = !book.readStatus ||
+                  book.readStatus === ReadStatus.UNREAD ||
+                  book.readStatus === ReadStatus.UNSET;
+                return bookNum > highestReadNumber && isUnread;
+              });
+
+          if (nextBook) {
+            // Get the most recent read time from the series to prioritize
+            const lastReadTime = seriesBooks
+              .filter(book => book.lastReadTime)
+              .map(book => new Date(book.lastReadTime!).getTime())
+              .sort((a, b) => b - a)[0] || 0;
+
+            upNextBooks.push({book: nextBook, lastReadTime});
+          }
+        });
+
+        // Sort by most recently read series first
+        upNextBooks.sort((a, b) => b.lastReadTime - a.lastReadTime);
+
+        return upNextBooks.slice(0, maxItems).map(item => item.book);
+      })
+    );
+  }
+
+  private getReadAgainBooks(maxItems: number, sortByFinished: boolean = false): Observable<Book[]> {
+    return this.bookService.bookState$.pipe(
+      map((state: BookState) => {
+        let readBooks = (state.books || []).filter(book =>
+          book.readStatus === ReadStatus.READ
+        );
+
+        if (sortByFinished) {
+          // Sort by date finished (most recent first)
+          readBooks = readBooks
+            .filter(book => book.dateFinished)
+            .sort((a, b) => {
+              const aTime = new Date(a.dateFinished!).getTime();
+              const bTime = new Date(b.dateFinished!).getTime();
+              return bTime - aTime;
+            })
+            .slice(0, maxItems);
+          return readBooks;
+        }
+
+        return this.shuffleBooks(readBooks, maxItems);
+      })
+    );
+  }
+
   private getMagicShelfBooks(shelfId: number, maxItems?: number, sortBy?: string): Observable<Book[]> {
     return this.magicShelfService.getShelf(shelfId).pipe(
       switchMap((shelf) => {
@@ -178,6 +293,91 @@ export class MainDashboardComponent implements OnInit {
     );
   }
 
+
+  private getRecommendationsBooks(maxItems: number, sortBy?: string): Observable<Book[]> {
+    return this.bookService.bookState$.pipe(
+      // Only recompute when read books actually change to avoid spamming the backend
+      map((state: BookState) => {
+        const readBooks = (state.books || []).filter(book => book.readStatus === ReadStatus.READ);
+        // Create a stable key based on read book IDs to detect meaningful changes
+        return {
+          readBooks,
+          readBookIds: readBooks.map(b => b.id).sort().join(',')
+        };
+      }),
+      distinctUntilChanged((prev, curr) => prev.readBookIds === curr.readBookIds),
+      switchMap(({readBooks}) => {
+        if (readBooks.length === 0) {
+          return of([]);
+        }
+
+        // Get a pool of recently read books (last 50) and randomly sample from them
+        // This ensures different recommendations each time while still prioritizing recent reads
+        const recentReadBooks = readBooks
+          .filter(book => book.lastReadTime)
+          .sort((a, b) => {
+            const aTime = new Date(a.lastReadTime!).getTime();
+            const bTime = new Date(b.lastReadTime!).getTime();
+            return bTime - aTime;
+          })
+          .slice(0, 50);
+
+        if (recentReadBooks.length === 0) {
+          return of([]);
+        }
+
+        // Randomly select up to 5 books from the pool to get recommendations from
+        const sampledBooks = this.shuffleBooks(recentReadBooks, Math.min(5, recentReadBooks.length));
+
+        const recommendationCalls = sampledBooks.map(book =>
+          this.bookService.getBookRecommendations(book.id, 10).pipe(
+            // Handle individual call failures gracefully
+            catchError(error => {
+              console.warn(`Failed to get recommendations for book ${book.id}:`, error);
+              return of([]);
+            })
+          )
+        );
+
+        return forkJoin(recommendationCalls).pipe(
+          map((results: BookRecommendation[][]) => {
+            // Collect all unique unread recommendations
+            const recommendationMap = new Map<number, Book>();
+
+            results.forEach(recommendations => {
+              recommendations.forEach(rec => {
+                const bookId = rec.book.id;
+                
+                // Skip books that are already read, in progress, or otherwise not truly unread
+                if (rec.book.readStatus === ReadStatus.READ ||
+                    rec.book.readStatus === ReadStatus.READING ||
+                    rec.book.readStatus === ReadStatus.PAUSED ||
+                    rec.book.readStatus === ReadStatus.RE_READING ||
+                    rec.book.readStatus === ReadStatus.PARTIALLY_READ ||
+                    rec.book.readStatus === ReadStatus.WONT_READ ||
+                    rec.book.readStatus === ReadStatus.ABANDONED) {
+                  return;
+                }
+
+                if (!recommendationMap.has(bookId)) {
+                  recommendationMap.set(bookId, rec.book);
+                }
+              });
+            });
+
+            const allRecommendations = Array.from(recommendationMap.values());
+            return this.shuffleBooks(allRecommendations, maxItems);
+          }),
+          // Handle overall operation failure
+          catchError(error => {
+            console.error('Failed to get book recommendations:', error);
+            return of([]);
+          })
+        );
+      })
+    );
+  }
+
   getBooksForScroller(config: ScrollerConfig): Observable<Book[]> {
     if (!this.scrollerBooksCache.has(config.id)) {
       let books$: Observable<Book[]>;
@@ -194,6 +394,15 @@ export class MainDashboardComponent implements OnInit {
           break;
         case ScrollerType.RANDOM:
           books$ = this.getRandomBooks(config.maxItems || DEFAULT_MAX_ITEMS);
+          break;
+        case ScrollerType.UP_NEXT:
+          books$ = this.getUpNextBooks(config.maxItems || DEFAULT_MAX_ITEMS, config.upNextShowFirstUnread || false);
+          break;
+        case ScrollerType.READ_AGAIN:
+          books$ = this.getReadAgainBooks(config.maxItems || DEFAULT_MAX_ITEMS, config.readAgainSortByFinished || false);
+          break;
+        case ScrollerType.RECOMMENDATIONS:
+          books$ = this.getRecommendationsBooks(config.maxItems || DEFAULT_MAX_ITEMS);
           break;
         case ScrollerType.MAGIC_SHELF:
           books$ = this.getMagicShelfBooks(config.magicShelfId!, config.maxItems).pipe(

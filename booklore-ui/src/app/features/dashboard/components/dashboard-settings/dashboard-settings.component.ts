@@ -12,9 +12,9 @@ import {DashboardConfig, ScrollerConfig, ScrollerType} from '../../models/dashbo
 import {DashboardConfigService} from '../../services/dashboard-config.service';
 import {MagicShelfService} from '../../../magic-shelf/service/magic-shelf.service';
 import {map} from 'rxjs/operators';
-import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 
-export const MAX_SCROLLERS = 5;
+export const MAX_SCROLLERS = 10;
 export const DEFAULT_MAX_ITEMS = 20;
 export const MIN_ITEMS = 10;
 export const MAX_ITEMS = 20;
@@ -30,8 +30,7 @@ export const MAX_ITEMS = 20;
     InputTextModule,
     SelectModule,
     InputNumberModule,
-    TranslocoDirective,
-    TranslocoPipe
+    TranslocoDirective
   ],
   templateUrl: './dashboard-settings.component.html',
   styleUrls: ['./dashboard-settings.component.scss']
@@ -45,9 +44,16 @@ export class DashboardSettingsComponent implements OnInit {
 
   config!: DashboardConfig;
 
-  availableScrollerTypes: {label: string; value: ScrollerType}[] = [];
-  sortFieldOptions: {label: string; value: string}[] = [];
-  sortDirectionOptions: {label: string; value: string}[] = [];
+  availableScrollerTypes = [
+    {label: 'Continue Reading', value: ScrollerType.LAST_READ},
+    {label: 'Continue Listening', value: ScrollerType.LAST_LISTENED},
+    {label: 'Recently Added', value: ScrollerType.LATEST_ADDED},
+    {label: 'Discover Something New', value: ScrollerType.RANDOM},
+    {label: 'Magic Shelf', value: ScrollerType.MAGIC_SHELF},
+    {label: 'Up Next', value: ScrollerType.UP_NEXT},
+    {label: 'Read Again', value: ScrollerType.READ_AGAIN},
+    {label: 'Recommendations', value: ScrollerType.RECOMMENDATIONS}
+  ];
 
   magicShelves$ = this.magicShelfService.shelvesState$.pipe(
     map(state => (state.shelves || []).map(shelf => ({
@@ -56,10 +62,42 @@ export class DashboardSettingsComponent implements OnInit {
     })))
   );
 
+  sortFieldOptions = [
+    {label: 'Title', value: 'title'},
+    {label: 'Title + Series', value: 'titleSeries'},
+    {label: 'File Name', value: 'fileName'},
+    {label: 'File Path', value: 'filePath'},
+    {label: 'Date Added', value: 'addedOn'},
+    {label: 'Author', value: 'author'},
+    {label: 'Author (Surname)', value: 'authorSurnameVorname'},
+    {label: 'Author + Series', value: 'authorSeries'},
+    {label: 'Personal Rating', value: 'personalRating'},
+    {label: 'Publisher', value: 'publisher'},
+    {label: 'Published Date', value: 'publishedDate'},
+    {label: 'Last Read', value: 'lastReadTime'},
+    {label: 'Pages', value: 'pageCount'}
+  ];
+
+  sortDirectionOptions = [
+    {label: 'Ascending', value: 'asc'},
+    {label: 'Descending', value: 'desc'}
+  ];
+
+  upNextModeOptions = [
+    {label: 'Next book in series', value: false},
+    {label: 'First unread in series', value: true}
+  ];
+
+  readAgainSortOptions = [
+    {label: 'Random', value: false},
+    {label: 'Recently finished', value: true}
+  ];
+
   private magicShelvesMap = new Map<number, string>();
 
   readonly MIN_ITEMS = MIN_ITEMS;
   readonly MAX_ITEMS = MAX_ITEMS;
+  readonly MAX_SCROLLERS = MAX_SCROLLERS;
 
   ngOnInit(): void {
     this.translocoService.langChanges$
@@ -131,6 +169,12 @@ export class DashboardSettingsComponent implements OnInit {
         return 'dashboard.scroller.recentlyAdded';
       case ScrollerType.RANDOM:
         return 'dashboard.scroller.discoverNew';
+      case ScrollerType.UP_NEXT:
+        return 'dashboard.scroller.upNext';
+      case ScrollerType.READ_AGAIN:
+        return 'dashboard.scroller.readAgain';
+      case ScrollerType.RECOMMENDATIONS:
+        return 'dashboard.scroller.recomendations';
       default:
         return 'dashboard.scroller.default';
     }
@@ -160,10 +204,29 @@ export class DashboardSettingsComponent implements OnInit {
   }
 
   onScrollerTypeChange(scroller: ScrollerConfig): void {
-    if (scroller.type === ScrollerType.MAGIC_SHELF) {
-      scroller.magicShelfId = undefined;
-    } else {
+    // Clean up type-specific fields when switching away from that type
+    if (scroller.type !== ScrollerType.MAGIC_SHELF) {
       delete scroller.magicShelfId;
+      delete scroller.sortField;
+      delete scroller.sortDirection;
+    }
+
+    if (scroller.type === ScrollerType.UP_NEXT) {
+      // Initialize to default if not already set
+      if (scroller.upNextShowFirstUnread === undefined) {
+        scroller.upNextShowFirstUnread = false;
+      }
+    } else {
+      delete scroller.upNextShowFirstUnread;
+    }
+
+    if (scroller.type === ScrollerType.READ_AGAIN) {
+      // Initialize to default if not already set
+      if (scroller.readAgainSortByFinished === undefined) {
+        scroller.readAgainSortByFinished = false;
+      }
+    } else {
+      delete scroller.readAgainSortByFinished;
     }
   }
 

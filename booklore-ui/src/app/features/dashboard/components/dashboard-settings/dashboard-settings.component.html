@@ -6,7 +6,7 @@
       </div>
       <div class="header-text">
         <h2 class="panel-title">{{ t('title') }}</h2>
-        <p class="panel-description">{{ t('description') }}</p>
+        <p class="panel-description">{{ t('description', { maxScrollers: MAX_SCROLLERS }) }}</p>
       </div>
       <p-button
         icon="pi pi-times"
@@ -52,38 +52,53 @@
                 </div>
 
                 <div class="scroller-field">
-                  <label>{{ t('sortField') }}</label>
-                  <p-select
-                    fluid
-                    [options]="sortFieldOptions"
-                    [(ngModel)]="scroller.sortField"
-                    [placeholder]="t('selectField')"
-                    appendTo="body">
-                  </p-select>
-                </div>
-
-                <div class="scroller-field">
-                  <label>{{ t('direction') }}</label>
+                  <label>Direction</label>
                   <p-select
                     fluid
                     [options]="sortDirectionOptions"
                     [(ngModel)]="scroller.sortDirection"
-                    [placeholder]="t('selectDirection')"
+                    placeholder="Select direction"
                     appendTo="body">
                   </p-select>
                 </div>
               }
-            </div>
 
-            <div class="scroller-field max-items-field">
-              <label>{{ t('maxItems') }}</label>
-              <p-inputNumber
-                fluid
-                [(ngModel)]="scroller.maxItems"
-                [min]="MIN_ITEMS"
-                [max]="MAX_ITEMS"
-                [showButtons]="true">
-              </p-inputNumber>
+            @if (scroller.type === 'upNext') {
+              <div class="scroller-field">
+                <label>Book Selection</label>
+                <p-select
+                  fluid
+                  [options]="upNextModeOptions"
+                  [(ngModel)]="scroller.upNextShowFirstUnread"
+                  placeholder="Select mode"
+                  appendTo="body">
+                </p-select>
+              </div>
+            }
+
+            @if (scroller.type === 'readAgain') {
+              <div class="scroller-field">
+                <label>Sort Order</label>
+                <p-select
+                  fluid
+                  [options]="readAgainSortOptions"
+                  [(ngModel)]="scroller.readAgainSortByFinished"
+                  placeholder="Select sorting"
+                  appendTo="body">
+                </p-select>
+              </div>
+            }
+
+              <div class="scroller-field max-items-field">
+                <label>{{ t('maxItems') }}</label>
+                <p-inputNumber
+                  fluid
+                  [(ngModel)]="scroller.maxItems"
+                  [min]="MIN_ITEMS"
+                  [max]="MAX_ITEMS"
+                  [showButtons]="true">
+                </p-inputNumber>
+              </div>
             </div>
 
             <div class="scroller-controls-right">
@@ -123,14 +138,14 @@
     <div class="dialog-footer">
       <div class="footer-left">
         <p-button
-          [label]="t('addScroller')"
+          label="Add Scroller"
           icon="pi pi-plus"
           severity="primary"
           (click)="addScroller()"
-          [disabled]="config.scrollers.length >= 5">
+          [disabled]="config.scrollers.length >= MAX_SCROLLERS">
         </p-button>
         <p-button
-          [label]="t('resetToDefault')"
+          label="Reset to Default"
           icon="pi pi-refresh"
           severity="secondary"
           text
@@ -139,13 +154,13 @@
       </div>
       <div class="footer-actions">
         <p-button
-          [label]="'common.cancel' | transloco"
+          label="Cancel"
           [outlined]="true"
           severity="secondary"
           (click)="cancel()">
         </p-button>
         <p-button
-          [label]="'common.save' | transloco"
+          label="Save"
           icon="pi pi-check"
           severity="success"
           (click)="save()">
