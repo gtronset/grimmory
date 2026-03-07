@@ -265,55 +265,6 @@
   cursor: pointer;
 }
 
-// ── Status Badge ──
-
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: white;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-}
-
-.status-unread {
-  background-color: #6b7280;
-}
-
-.status-reading {
-  background-color: #2563eb;
-}
-
-.status-read {
-  background-color: #16a34a;
-}
-
-.status-partially-read {
-  background-color: #ca8a04;
-}
-
-.status-paused {
-  background-color: #475569;
-}
-
-.status-rereading {
-  background-color: #9333ea;
-}
-
-.status-abandoned {
-  background-color: #dc2626;
-}
-
-.status-wont-read {
-  background-color: #be185d;
-}
-
-.status-default {
-  background-color: #4b5563;
-}
-
 // ── Description (matches metadata-viewer) ──
 
 .description-section {

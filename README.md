@@ -2,17 +2,11 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo-with-text-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="assets/logo-with-text-light.svg">
-    <img src="assets/logo-with-text-light.svg" alt="WT-BookLore" height="80" />
+    <img src="assets/logo-with-text-light.svg" alt="BookLore" height="80" />
   </picture>
 </p>
 
-<h1 align="center">WT-BookLore</h1>
-
 <p align="center"><strong>Your books deserve a home. This is it.</strong></p>
-
-> [!NOTE]
-> **This is a fork of BookLore** with smaller changes focused on improving user experience (UX).
-> Based on the upstream [BookLore project](https://github.com/booklore-app/booklore).
 
 <p align="center">
 BookLore is a self-hosted app that brings your entire book collection under one roof.<br/>
@@ -32,8 +26,8 @@ Organize, read, annotate, sync across devices, and share, all without relying on
 <p align="center">
   <a href="https://booklore.org/">🌐 Website</a> ·
   <a href="https://booklore.org/docs/getting-started">📖 Docs</a> ·
-  <a href="#🎮-live-demo">🎮 Demo</a> ·
-  <a href="#🚀-quick-start">🚀 Quick Start</a> ·
+  <a href="#-live-demo">🎮 Demo</a> ·
+  <a href="#-quick-start">🚀 Quick Start</a> ·
   <a href="https://discord.gg/Ee5hd458Uz">💬 Discord</a>
 </p>
 
@@ -54,15 +48,6 @@ Organize, read, annotate, sync across devices, and share, all without relying on
 | 👥 | **Multi-User Ready** | Individual shelves, progress, and preferences per user with local or OIDC authentication |
 | 📥 | **BookDrop** | Drop files into a watched folder and BookLore detects, enriches, and queues them for import automatically |
 | 📧 | **One-Click Sharing** | Send any book to a Kindle, an email address, or a friend instantly |
-
-### 🎨 WT-BookLore Fork Enhancements
-
-| | Feature | Description |
-|:---:|:---|:---|
-| 🔄 | **Native Session Sync** | Built-in BookLore session synchronization for seamless reading progress across devices with [KOReader plugin support](https://gitlab.worldteacher.dev/WorldTeacher/booklore-koreader-plugin) |
-| 📊 | **Enhanced Dashboard** | Additional scrollers and widgets for better library overview and discovery |
-| 🔍 | **OPDS Magic Shelf Sort** | Sort support for Magic Shelves in OPDS feeds for organized mobile reading |
-| 📚 | **Library-Scoped OPDS** | Per-library OPDS feeds with authors, series, and recently added views for targeted browsing |
 
 ---
 
@@ -227,7 +212,7 @@ volumes:
 | 💬 **Come hang out** | [Discord Server](https://discord.gg/Ee5hd458Uz) |
 
 > [!WARNING]
-> **Before opening a PR:** Open an issue first and get maintainer approval. PRs without a linked issue, without screenshots/video proof, or without pasted test output will be closed. AI-assisted contributions are welcome, but you must run, test, and understand every line you submit. See the [Contributing Guide](CONTRIBUTING.md) for full details.
+> **Before opening a PR:** Open an issue first and get maintainer approval. PRs without a linked issue, without screenshots/video proof, or without pasted test output will be closed. All code must follow project [backend](CONTRIBUTING.md#backend-conventions) and [frontend](CONTRIBUTING.md#frontend-conventions) conventions. AI-assisted contributions are welcome, but you must run, test, and understand every line you submit. See the [Contributing Guide](CONTRIBUTING.md) for full details.
 
 ---
 
@@ -322,6 +307,10 @@ Every contribution matters. [See how you can help →](CONTRIBUTING.md)
 </div>
 
 ---
+
+## ⚠️ Note to Integrators
+
+While BookLore is open source and its API is accessible, it is not designed or maintained as a stable integration point. Endpoints are undocumented, unversioned, and may change or break at any time without notice. No compatibility guarantees or support are provided for third-party use.
 
 <div align="center">
 

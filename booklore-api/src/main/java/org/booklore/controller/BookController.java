@@ -12,6 +12,7 @@ import org.booklore.model.dto.request.PersonalRatingUpdateRequest;
 import org.booklore.model.dto.request.ReadProgressRequest;
 import org.booklore.model.dto.request.ReadStatusUpdateRequest;
 import org.booklore.model.dto.request.ShelvesAssignmentRequest;
+import org.booklore.model.dto.response.AttachBookFileResponse;
 import org.booklore.model.dto.response.BookDeletionResponse;
 import org.booklore.model.dto.response.BookStatusUpdateResponse;
 import org.booklore.model.dto.response.DuplicateGroup;
@@ -35,10 +36,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,6 +49,7 @@ import java.util.Set;
 
 @Tag(name = "Books", description = "Endpoints for managing books, their metadata, progress, and recommendations")
 @RequestMapping("/api/v1/books")
+@Validated
 @RestController
 @AllArgsConstructor
 public class BookController {
@@ -68,15 +72,6 @@ public class BookController {
         return ResponseEntity.ok(bookService.getBookDTOs(withDescription));
     }
 
-    @Operation(summary = "Search books by title or ISBN", description = "Search for books using fuzzy title matching or ISBN. At least one search parameter must be provided. Returns matching books with cover, title, and hash.")
-    @ApiResponse(responseCode = "200", description = "Search results returned successfully")
-    @GetMapping("/search")
-    public ResponseEntity<List<org.booklore.model.dto.response.BookSearchResult>> searchBooks(
-            @Parameter(description = "Title to search for") @RequestParam(required = false) String title,
-            @Parameter(description = "ISBN to search for (ISBN-10 or ISBN-13)") @RequestParam(required = false) String isbn) {
-        return ResponseEntity.ok(bookService.fuzzySearch(title, isbn));
-    }
-
     @Operation(summary = "Get a book by ID", description = "Retrieve details of a specific book by its ID.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Book details returned successfully"),
@@ -88,18 +83,6 @@ public class BookController {
             @Parameter(description = "ID of the book to retrieve") @PathVariable long bookId,
             @Parameter(description = "Include book description in the response") @RequestParam(required = false, defaultValue = "false") boolean withDescription) {
         return ResponseEntity.ok(bookService.getBook(bookId, withDescription));
-    }
-
-    @Operation(summary = "Get book by MD5 hash", description = "Retrieve book details by MD5 hash. Used by KOReader to map local books to Booklore books. ISBN values are available in metadata.isbn10 and metadata.isbn13.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Book found and details returned including ISBN values in metadata"),
-            @ApiResponse(responseCode = "404", description = "Book not found with this hash")
-    })
-    @GetMapping("/by-hash/{md5Hash}")
-    public ResponseEntity<Book> getBookByHash(
-            @Parameter(description = "MD5 hash of the book file") @PathVariable String md5Hash,
-            @Parameter(description = "Include book description in the response") @RequestParam(required = false, defaultValue = "false") boolean withDescription) {
-        return ResponseEntity.ok(bookService.getBookByHash(md5Hash, withDescription));
     }
 
     @Operation(summary = "Create a physical book", description = "Create a physical book without digital files. Requires library management permission or admin.")
@@ -210,7 +193,7 @@ public class BookController {
     @PutMapping("/{bookId}/viewer-setting")
     @CheckBookAccess(bookIdParam = "bookId")
     public ResponseEntity<Void> updateBookViewerSettings(
-            @Parameter(description = "Viewer settings to update") @RequestBody BookViewerSettings bookViewerSettings,
+            @Parameter(description = "Viewer settings to update") @RequestBody @Valid BookViewerSettings bookViewerSettings,
             @Parameter(description = "ID of the book") @PathVariable long bookId) {
         bookService.updateBookViewerSetting(bookId, bookViewerSettings);
         return ResponseEntity.noContent().build();
@@ -257,7 +240,7 @@ public class BookController {
     })
     @PostMapping("/reset-progress")
     public ResponseEntity<List<BookStatusUpdateResponse>> resetProgress(
-            @Parameter(description = "List of book IDs to reset progress for") @RequestBody List<Long> bookIds,
+            @Parameter(description = "List of book IDs to reset progress for") @RequestBody @Size(max = 500) List<Long> bookIds,
             @Parameter(description = "Type of progress reset") @RequestParam ResetProgressType type) {
         if (bookIds == null || bookIds.isEmpty()) {
             throw ApiError.GENERIC_BAD_REQUEST.createException("No book IDs provided");
@@ -280,7 +263,7 @@ public class BookController {
     })
     @PostMapping("/reset-personal-rating")
     public ResponseEntity<List<PersonalRatingUpdateResponse>> resetPersonalRating(
-            @Parameter(description = "List of book IDs to reset personal rating for") @RequestBody List<Long> bookIds) {
+            @Parameter(description = "List of book IDs to reset personal rating for") @RequestBody @Size(max = 500) List<Long> bookIds) {
         if (bookIds == null || bookIds.isEmpty()) {
             throw ApiError.GENERIC_BAD_REQUEST.createException("No book IDs provided");
         }
@@ -306,10 +289,9 @@ public class BookController {
     })
     @PostMapping("/{targetBookId}/attach-file")
     @PreAuthorize("@securityUtil.canManageLibrary() or @securityUtil.isAdmin()")
-    public ResponseEntity<Book> attachBookFiles(
+    public ResponseEntity<AttachBookFileResponse> attachBookFiles(
             @Parameter(description = "ID of the target book to attach the files to") @PathVariable Long targetBookId,
             @Parameter(description = "Request containing source book IDs and delete option") @RequestBody @Valid AttachBookFileRequest request) {
         return ResponseEntity.ok(bookFileAttachmentService.attachBookFiles(targetBookId, request.getSourceBookIds(), request.isMoveFiles()));
     }
-
 }

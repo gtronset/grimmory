@@ -47,3 +47,4 @@ booklore-ui/test-results/
 booklore-api/src/main/resources/application-local.yaml
 /shared/
 example-docker/compose.yml
+.agents/

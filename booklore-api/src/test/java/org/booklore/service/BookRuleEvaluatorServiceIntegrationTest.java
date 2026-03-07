@@ -243,23 +243,19 @@ class BookRuleEvaluatorServiceIntegrationTest {
 
         @Test
         void thisPeriod_year_matchesThisYearBook() {
-            LocalDate today = LocalDate.now();
-            LocalDate firstOfYear = today.withDayOfYear(1);
-            LocalDate lastYear = firstOfYear.minusYears(1);
-
             BookEntity thisYear = createBook("This Year Book");
-            thisYear.setAddedOn(firstOfYear.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
+            thisYear.setAddedOn(Instant.now().minus(10, ChronoUnit.DAYS));
             em.merge(thisYear);
 
-            BookEntity lastYearBook = createBook("Last Year Book");
-            lastYearBook.setAddedOn(lastYear.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
-            em.merge(lastYearBook);
+            BookEntity lastYear = createBook("Last Year Book");
+            lastYear.setAddedOn(Instant.now().minus(400, ChronoUnit.DAYS));
+            em.merge(lastYear);
             em.flush();
             em.clear();
 
             List<Long> ids = findMatchingIds(singleRule(RuleField.ADDED_ON, RuleOperator.THIS_PERIOD, "year"));
             assertThat(ids).contains(thisYear.getId());
-            assertThat(ids).doesNotContain(lastYearBook.getId());
+            assertThat(ids).doesNotContain(lastYear.getId());
         }
 
         @Test
@@ -627,16 +623,12 @@ class BookRuleEvaluatorServiceIntegrationTest {
 
         @Test
         void thisPeriod_month_matchesThisMonthBook() {
-            LocalDate today = LocalDate.now();
-            LocalDate firstOfMonth = today.withDayOfMonth(1);
-            LocalDate lastMonth = firstOfMonth.minusMonths(1);
-
             BookEntity thisMonth = createBook("This Month Book");
-            thisMonth.setAddedOn(firstOfMonth.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
+            thisMonth.setAddedOn(Instant.now().minus(1, ChronoUnit.HOURS));
             em.merge(thisMonth);
 
             BookEntity notThisMonth = createBook("Not This Month Book");
-            notThisMonth.setAddedOn(lastMonth.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
+            notThisMonth.setAddedOn(Instant.now().minus(60, ChronoUnit.DAYS));
             em.merge(notThisMonth);
             em.flush();
             em.clear();
@@ -1039,13 +1031,13 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity book1 = createBook("Mistborn");
             AuthorEntity author1 = AuthorEntity.builder().name("Brandon Sanderson").build();
             em.persist(author1);
-            book1.getMetadata().setAuthors(new HashSet<>(Set.of(author1)));
+            book1.getMetadata().setAuthors(new ArrayList<>(List.of(author1)));
             em.merge(book1.getMetadata());
 
             BookEntity book2 = createBook("It");
             AuthorEntity author2 = AuthorEntity.builder().name("Stephen King").build();
             em.persist(author2);
-            book2.getMetadata().setAuthors(new HashSet<>(Set.of(author2)));
+            book2.getMetadata().setAuthors(new ArrayList<>(List.of(author2)));
             em.merge(book2.getMetadata());
             em.flush();
             em.clear();
@@ -1097,7 +1089,7 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity withAuthors = createBook("With Authors Book");
             AuthorEntity author = AuthorEntity.builder().name("Test Author").build();
             em.persist(author);
-            withAuthors.getMetadata().setAuthors(new HashSet<>(Set.of(author)));
+            withAuthors.getMetadata().setAuthors(new ArrayList<>(List.of(author)));
             em.merge(withAuthors.getMetadata());
             em.flush();
             em.clear();
@@ -1114,7 +1106,7 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity withAuthors = createBook("With Authors Book");
             AuthorEntity author = AuthorEntity.builder().name("Test Author 2").build();
             em.persist(author);
-            withAuthors.getMetadata().setAuthors(new HashSet<>(Set.of(author)));
+            withAuthors.getMetadata().setAuthors(new ArrayList<>(List.of(author)));
             em.merge(withAuthors.getMetadata());
             em.flush();
             em.clear();
@@ -1168,19 +1160,19 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity bookA = createBook("Book A");
             AuthorEntity authorA = AuthorEntity.builder().name("Author A").build();
             em.persist(authorA);
-            bookA.getMetadata().setAuthors(new HashSet<>(Set.of(authorA)));
+            bookA.getMetadata().setAuthors(new ArrayList<>(List.of(authorA)));
             em.merge(bookA.getMetadata());
 
             BookEntity bookB = createBook("Book B");
             AuthorEntity authorB = AuthorEntity.builder().name("Author B").build();
             em.persist(authorB);
-            bookB.getMetadata().setAuthors(new HashSet<>(Set.of(authorB)));
+            bookB.getMetadata().setAuthors(new ArrayList<>(List.of(authorB)));
             em.merge(bookB.getMetadata());
 
             BookEntity bookC = createBook("Book C");
             AuthorEntity authorC = AuthorEntity.builder().name("Author C").build();
             em.persist(authorC);
-            bookC.getMetadata().setAuthors(new HashSet<>(Set.of(authorC)));
+            bookC.getMetadata().setAuthors(new ArrayList<>(List.of(authorC)));
             em.merge(bookC.getMetadata());
             em.flush();
             em.clear();
@@ -1195,19 +1187,19 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity bookA = createBook("Book A2");
             AuthorEntity authorA = AuthorEntity.builder().name("Author A2").build();
             em.persist(authorA);
-            bookA.getMetadata().setAuthors(new HashSet<>(Set.of(authorA)));
+            bookA.getMetadata().setAuthors(new ArrayList<>(List.of(authorA)));
             em.merge(bookA.getMetadata());
 
             BookEntity bookB = createBook("Book B2");
             AuthorEntity authorB = AuthorEntity.builder().name("Author B2").build();
             em.persist(authorB);
-            bookB.getMetadata().setAuthors(new HashSet<>(Set.of(authorB)));
+            bookB.getMetadata().setAuthors(new ArrayList<>(List.of(authorB)));
             em.merge(bookB.getMetadata());
 
             BookEntity bookC = createBook("Book C2");
             AuthorEntity authorC = AuthorEntity.builder().name("Author C2").build();
             em.persist(authorC);
-            bookC.getMetadata().setAuthors(new HashSet<>(Set.of(authorC)));
+            bookC.getMetadata().setAuthors(new ArrayList<>(List.of(authorC)));
             em.merge(bookC.getMetadata());
             em.flush();
             em.clear();
@@ -1224,13 +1216,13 @@ class BookRuleEvaluatorServiceIntegrationTest {
             AuthorEntity authorY = AuthorEntity.builder().name("Author Y").build();
             em.persist(authorX);
             em.persist(authorY);
-            bookBoth.getMetadata().setAuthors(new HashSet<>(Set.of(authorX, authorY)));
+            bookBoth.getMetadata().setAuthors(new ArrayList<>(List.of(authorX, authorY)));
             em.merge(bookBoth.getMetadata());
 
             BookEntity bookOne = createBook("Book One Author");
             AuthorEntity authorX2 = AuthorEntity.builder().name("Author X2").build();
             em.persist(authorX2);
-            bookOne.getMetadata().setAuthors(new HashSet<>(Set.of(authorX2)));
+            bookOne.getMetadata().setAuthors(new ArrayList<>(List.of(authorX2)));
             em.merge(bookOne.getMetadata());
             em.flush();
             em.clear();
@@ -1472,16 +1464,12 @@ class BookRuleEvaluatorServiceIntegrationTest {
 
         @Test
         void thisPeriod_publishedDate_matchesThisYearBook() {
-            LocalDate today = LocalDate.now();
-            LocalDate firstOfYear = today.withDayOfYear(1);
-            LocalDate twoYearsAgo = firstOfYear.minusYears(2);
-
             BookEntity recentBook = createBook("This Year Published");
-            recentBook.getMetadata().setPublishedDate(firstOfYear);
+            recentBook.getMetadata().setPublishedDate(LocalDate.now().minusDays(10));
             em.merge(recentBook.getMetadata());
 
             BookEntity oldBook = createBook("Two Years Ago Published");
-            oldBook.getMetadata().setPublishedDate(twoYearsAgo);
+            oldBook.getMetadata().setPublishedDate(LocalDate.now().minusYears(2));
             em.merge(oldBook.getMetadata());
             em.flush();
             em.clear();
@@ -1493,23 +1481,25 @@ class BookRuleEvaluatorServiceIntegrationTest {
 
         @Test
         void thisPeriod_week_matchesThisWeekBook() {
-            LocalDate today = LocalDate.now();
-            LocalDate thisMonday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
-            LocalDate lastWeek = thisMonday.minusWeeks(1);
+            // Use midweek (Wednesday) of the current week to avoid boundary issues on Monday
+            LocalDate thisWeekWednesday = LocalDate.now().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).plusDays(2);
+            // If Wednesday is in the future (we're Mon/Tue), just use today
+            LocalDate safeDate = thisWeekWednesday.isAfter(LocalDate.now()) ? LocalDate.now() : thisWeekWednesday;
+            Instant thisWeekInstant = safeDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().plus(12, ChronoUnit.HOURS);
 
             BookEntity thisWeekBook = createBook("This Week Book");
-            thisWeekBook.setAddedOn(thisMonday.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
+            thisWeekBook.setAddedOn(thisWeekInstant);
             em.merge(thisWeekBook);
 
-            BookEntity lastWeekBook = createBook("Last Week Book");
-            lastWeekBook.setAddedOn(lastWeek.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
-            em.merge(lastWeekBook);
+            BookEntity twoWeeksAgo = createBook("Two Weeks Ago Book");
+            twoWeeksAgo.setAddedOn(Instant.now().minus(14, ChronoUnit.DAYS));
+            em.merge(twoWeeksAgo);
             em.flush();
             em.clear();
 
             List<Long> ids = findMatchingIds(singleRule(RuleField.ADDED_ON, RuleOperator.THIS_PERIOD, "week"));
             assertThat(ids).contains(thisWeekBook.getId());
-            assertThat(ids).doesNotContain(lastWeekBook.getId());
+            assertThat(ids).doesNotContain(twoWeeksAgo.getId());
         }
     }
 
@@ -1608,7 +1598,7 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity withAuthors = createBook("With Authors");
             AuthorEntity author = AuthorEntity.builder().name("Test Author MP").build();
             em.persist(author);
-            withAuthors.getMetadata().setAuthors(new HashSet<>(Set.of(author)));
+            withAuthors.getMetadata().setAuthors(new ArrayList<>(List.of(author)));
             em.merge(withAuthors.getMetadata());
 
             BookEntity noAuthors = createBook("No Authors");
@@ -1625,7 +1615,7 @@ class BookRuleEvaluatorServiceIntegrationTest {
             BookEntity withAuthors = createBook("With Authors");
             AuthorEntity author = AuthorEntity.builder().name("Test Author MP2").build();
             em.persist(author);
-            withAuthors.getMetadata().setAuthors(new HashSet<>(Set.of(author)));
+            withAuthors.getMetadata().setAuthors(new ArrayList<>(List.of(author)));
             em.merge(withAuthors.getMetadata());
 
             BookEntity noAuthors = createBook("No Authors");
@@ -2449,583 +2439,6 @@ class BookRuleEvaluatorServiceIntegrationTest {
             List<Long> ids = findMatchingIds(singleRule(RuleField.PAGE_COUNT, RuleOperator.NOT_EQUALS, 300));
             assertThat(ids).contains(book500.getId());
             assertThat(ids).doesNotContain(book300.getId());
-        }
-    }
-
-    @Nested
-    class FileSizeTests {
-        @Test
-        void greaterThan_matchesBooksAboveSize() {
-            BookEntity largeBook = createBook("Large Book");
-            BookFileEntity largeFile = BookFileEntity.builder()
-                    .book(largeBook)
-                    .fileName("large.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(10000L)
-                    .build();
-            em.persist(largeFile);
-
-            BookEntity smallBook = createBook("Small Book");
-            BookFileEntity smallFile = BookFileEntity.builder()
-                    .book(smallBook)
-                    .fileName("small.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(1000L)
-                    .build();
-            em.persist(smallFile);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_SIZE, RuleOperator.GREATER_THAN, 5000));
-            assertThat(ids).contains(largeBook.getId());
-            assertThat(ids).doesNotContain(smallBook.getId());
-        }
-
-        @Test
-        void lessThan_matchesBooksBelow() {
-            BookEntity largeBook = createBook("Large Book 2");
-            BookFileEntity largeFile = BookFileEntity.builder()
-                    .book(largeBook)
-                    .fileName("large2.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(10000L)
-                    .build();
-            em.persist(largeFile);
-
-            BookEntity smallBook = createBook("Small Book 2");
-            BookFileEntity smallFile = BookFileEntity.builder()
-                    .book(smallBook)
-                    .fileName("small2.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(1000L)
-                    .build();
-            em.persist(smallFile);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_SIZE, RuleOperator.LESS_THAN, 5000));
-            assertThat(ids).contains(smallBook.getId());
-            assertThat(ids).doesNotContain(largeBook.getId());
-        }
-
-        @Test
-        void inBetween_matchesFileSizeRange() {
-            BookEntity tooSmall = createBook("Too Small");
-            BookFileEntity smallFile = BookFileEntity.builder()
-                    .book(tooSmall)
-                    .fileName("toosmall.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(500L)
-                    .build();
-            em.persist(smallFile);
-
-            BookEntity justRight = createBook("Just Right");
-            BookFileEntity midFile = BookFileEntity.builder()
-                    .book(justRight)
-                    .fileName("justright.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(3000L)
-                    .build();
-            em.persist(midFile);
-
-            BookEntity tooLarge = createBook("Too Large");
-            BookFileEntity largeFile = BookFileEntity.builder()
-                    .book(tooLarge)
-                    .fileName("toolarge.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(8000L)
-                    .build();
-            em.persist(largeFile);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_SIZE, RuleOperator.IN_BETWEEN, null, 1000, 5000));
-            assertThat(ids).contains(justRight.getId());
-            assertThat(ids).doesNotContain(tooSmall.getId(), tooLarge.getId());
-        }
-
-        @Test
-        void equals_matchesExactFileSize() {
-            BookEntity exactBook = createBook("Exact Size Book");
-            BookFileEntity exactFile = BookFileEntity.builder()
-                    .book(exactBook)
-                    .fileName("exact.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(2048L)
-                    .build();
-            em.persist(exactFile);
-
-            BookEntity differentBook = createBook("Different Size Book");
-            BookFileEntity differentFile = BookFileEntity.builder()
-                    .book(differentBook)
-                    .fileName("different.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(2049L)
-                    .build();
-            em.persist(differentFile);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_SIZE, RuleOperator.EQUALS, 2048));
-            assertThat(ids).contains(exactBook.getId());
-            assertThat(ids).doesNotContain(differentBook.getId());
-        }
-
-        @Test
-        void booksWithoutFiles_excludedFromResults() {
-            BookEntity noFile = createBook("No File Book");
-
-            BookEntity withFile = createBook("With File Book");
-            BookFileEntity file = BookFileEntity.builder()
-                    .book(withFile)
-                    .fileName("withfile.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(file);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_SIZE, RuleOperator.GREATER_THAN, 1000));
-            assertThat(ids).contains(withFile.getId());
-            assertThat(ids).doesNotContain(noFile.getId());
-        }
-
-        @Test
-        void onlyBookFormatFiles_considered() {
-            BookEntity bookWithEpub = createBook("Book With EPUB");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(bookWithEpub)
-                    .fileName("book.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(3000L)
-                    .build();
-            em.persist(epubFile);
-
-            BookEntity bookWithPdf = createBook("Book With PDF");
-            BookFileEntity pdfFile = BookFileEntity.builder()
-                    .book(bookWithPdf)
-                    .fileName("book.pdf")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.PDF)
-                    .fileSizeKb(500L)
-                    .build();
-            em.persist(pdfFile);
-            em.flush();
-            em.clear();
-
-            // Should only return books with files > 2000 KB
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_SIZE, RuleOperator.GREATER_THAN, 2000));
-            assertThat(ids).contains(bookWithEpub.getId());
-            assertThat(ids).doesNotContain(bookWithPdf.getId());
-        }
-    }
-
-    @Nested
-    class FileTypeTests {
-        @Test
-        void equals_matchesSpecificFileType() {
-            BookEntity epubBook = createBook("EPUB Book");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-
-            BookEntity pdfBook = createBook("PDF Book");
-            BookFileEntity pdfFile = BookFileEntity.builder()
-                    .book(pdfBook)
-                    .fileName("book.pdf")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.PDF)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(pdfFile);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "EPUB"));
-            assertThat(ids).contains(epubBook.getId());
-            assertThat(ids).doesNotContain(pdfBook.getId());
-        }
-
-        @Test
-        void notEquals_excludesSpecificFileType() {
-            BookEntity epubBook = createBook("EPUB Book 2");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book2.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-
-            BookEntity pdfBook = createBook("PDF Book 2");
-            BookFileEntity pdfFile = BookFileEntity.builder()
-                    .book(pdfBook)
-                    .fileName("book2.pdf")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.PDF)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(pdfFile);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.NOT_EQUALS, "EPUB"));
-            assertThat(ids).contains(pdfBook.getId());
-            assertThat(ids).doesNotContain(epubBook.getId());
-        }
-
-        @Test
-        void includesAny_matchesMultipleFileTypes() {
-            BookEntity epubBook = createBook("EPUB Book 3");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book3.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-
-            BookEntity mobiBook = createBook("MOBI Book");
-            BookFileEntity mobiFile = BookFileEntity.builder()
-                    .book(mobiBook)
-                    .fileName("book.mobi")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.MOBI)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(mobiFile);
-
-            BookEntity pdfBook = createBook("PDF Book 3");
-            BookFileEntity pdfFile = BookFileEntity.builder()
-                    .book(pdfBook)
-                    .fileName("book3.pdf")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.PDF)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(pdfFile);
-            em.flush();
-            em.clear();
-
-            // FILE_TYPE uses string representation, so test with actual enum values
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "EPUB"));
-            assertThat(ids).contains(epubBook.getId());
-            
-            List<Long> mobiIds = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "MOBI"));
-            assertThat(mobiIds).contains(mobiBook.getId());
-        }
-
-        @Test
-        void excludesAll_excludesAllSpecifiedFileTypes() {
-            BookEntity epubBook = createBook("EPUB Book 4");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book4.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-
-            BookEntity audiobookBook = createBook("Audiobook");
-            BookFileEntity audiobookFile = BookFileEntity.builder()
-                    .book(audiobookBook)
-                    .fileName("book.m4b")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.AUDIOBOOK)
-                    .fileSizeKb(50000L)
-                    .build();
-            em.persist(audiobookFile);
-            em.flush();
-            em.clear();
-
-            List<Long> epubIds = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.NOT_EQUALS, "EPUB"));
-            assertThat(epubIds).contains(audiobookBook.getId());
-            assertThat(epubIds).doesNotContain(epubBook.getId());
-        }
-
-        @Test
-        void booksWithoutFiles_excludedFromResults() {
-            BookEntity noFile = createBook("No File Book 2");
-
-            BookEntity withFile = createBook("With File Book 2");
-            BookFileEntity file = BookFileEntity.builder()
-                    .book(withFile)
-                    .fileName("withfile2.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(file);
-            em.flush();
-            em.clear();
-
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "EPUB"));
-            assertThat(ids).contains(withFile.getId());
-            assertThat(ids).doesNotContain(noFile.getId());
-        }
-
-        @Test
-        void onlyBookFormatFiles_considered() {
-            BookEntity pdfBook = createBook("Book With PDF Format");
-            BookFileEntity pdfFile = BookFileEntity.builder()
-                    .book(pdfBook)
-                    .fileName("book_multi.pdf")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.PDF)
-                    .fileSizeKb(3000L)
-                    .build();
-            em.persist(pdfFile);
-
-            BookEntity epubBook = createBook("Book With EPUB Format");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(3000L)
-                    .build();
-            em.persist(epubFile);
-            em.flush();
-            em.clear();
-
-            // Should only match PDF book file type
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "PDF"));
-            assertThat(ids).contains(pdfBook.getId());
-            assertThat(ids).doesNotContain(epubBook.getId());
-        }
-
-        @Test
-        void allFileTypeEnums_canBeMatched() {
-            // Test all BookFileType enum values can be queried
-            for (BookFileType type : List.of(BookFileType.EPUB, BookFileType.PDF, BookFileType.MOBI, 
-                    BookFileType.AUDIOBOOK, BookFileType.CBX, BookFileType.FB2, BookFileType.AZW3)) {
-                BookEntity book = createBook("Book Type " + type.name());
-                BookFileEntity file = BookFileEntity.builder()
-                        .book(book)
-                        .fileName("book." + type.name().toLowerCase())
-                        .fileSubPath("")
-                        .isBookFormat(true)
-                        .bookType(type)
-                        .fileSizeKb(5000L)
-                        .build();
-                em.persist(file);
-                em.flush();
-                em.clear();
-
-                List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, type.name()));
-                assertThat(ids).as("Matching type %s", type.name()).contains(book.getId());
-            }
-        }
-
-        @Test
-        void fileTypeMapping_cbr_matchesCBX() {
-            BookEntity cbxBook = createBook("CBR File");
-            BookFileEntity cbrFile = BookFileEntity.builder()
-                    .book(cbxBook)
-                    .fileName("book.cbr")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.CBX)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(cbrFile);
-
-            BookEntity epubBook = createBook("EPUB File");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-            em.flush();
-            em.clear();
-
-            // Query for "CBR" should map to "CBX" and match the book
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "CBR"));
-            assertThat(ids).contains(cbxBook.getId());
-            assertThat(ids).doesNotContain(epubBook.getId());
-        }
-
-        @Test
-        void fileTypeMapping_cbz_matchesCBX() {
-            BookEntity cbxBook = createBook("CBZ File");
-            BookFileEntity cbzFile = BookFileEntity.builder()
-                    .book(cbxBook)
-                    .fileName("book.cbz")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.CBX)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(cbzFile);
-            em.flush();
-            em.clear();
-
-            // Query for "CBZ" should map to "CBX" and match the book
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "CBZ"));
-            assertThat(ids).contains(cbxBook.getId());
-        }
-
-        @Test
-        void fileTypeMapping_cb7_matchesCBX() {
-            BookEntity cbxBook = createBook("CB7 File");
-            BookFileEntity cb7File = BookFileEntity.builder()
-                    .book(cbxBook)
-                    .fileName("book.cb7")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.CBX)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(cb7File);
-            em.flush();
-            em.clear();
-
-            // Query for "CB7" should map to "CBX" and match the book
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "CB7"));
-            assertThat(ids).contains(cbxBook.getId());
-        }
-
-        @Test
-        void fileTypeMapping_azw_matchesAZW3() {
-            BookEntity azw3Book = createBook("AZW File");
-            BookFileEntity azwFile = BookFileEntity.builder()
-                    .book(azw3Book)
-                    .fileName("book.azw")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.AZW3)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(azwFile);
-            em.flush();
-            em.clear();
-
-            // Query for "AZW" should map to "AZW3" and match the book
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.EQUALS, "AZW"));
-            assertThat(ids).contains(azw3Book.getId());
-        }
-
-        @Test
-        void fileTypeMapping_includesAny_withCBRandPDF() {
-            BookEntity cbxBook = createBook("CBX Format Book");
-            BookFileEntity cbxFile = BookFileEntity.builder()
-                    .book(cbxBook)
-                    .fileName("comic.cbr")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.CBX)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(cbxFile);
-
-            BookEntity pdfBook = createBook("PDF Format Book");
-            BookFileEntity pdfFile = BookFileEntity.builder()
-                    .book(pdfBook)
-                    .fileName("book.pdf")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.PDF)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(pdfFile);
-
-            BookEntity epubBook = createBook("EPUB Format Book");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-            em.flush();
-            em.clear();
-
-            // Query for includes_any ["CBR", "PDF"] should map CBR to CBX and match both
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.INCLUDES_ANY, List.of("CBR", "PDF")));
-            assertThat(ids).contains(cbxBook.getId(), pdfBook.getId());
-            assertThat(ids).doesNotContain(epubBook.getId());
-        }
-
-        @Test
-        void fileTypeMapping_notEquals_CBR_excludesCBX() {
-            BookEntity cbxBook = createBook("CBX Format Book 2");
-            BookFileEntity cbxFile = BookFileEntity.builder()
-                    .book(cbxBook)
-                    .fileName("comic2.cbr")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.CBX)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(cbxFile);
-
-            BookEntity epubBook = createBook("EPUB Format Book 2");
-            BookFileEntity epubFile = BookFileEntity.builder()
-                    .book(epubBook)
-                    .fileName("book2.epub")
-                    .fileSubPath("")
-                    .isBookFormat(true)
-                    .bookType(BookFileType.EPUB)
-                    .fileSizeKb(5000L)
-                    .build();
-            em.persist(epubFile);
-            em.flush();
-            em.clear();
-
-            // Query for not_equals "CBR" should map to "CBX" and exclude the CBX book
-            List<Long> ids = findMatchingIds(singleRule(RuleField.FILE_TYPE, RuleOperator.NOT_EQUALS, "CBR"));
-            assertThat(ids).contains(epubBook.getId());
-            assertThat(ids).doesNotContain(cbxBook.getId());
         }
     }
 }

@@ -1,9 +1,16 @@
 app:
   path-config: "/app/data"
   bookdrop-folder: "/bookdrop"
-  version: ${APP_VERSION:development}
+  version: "development"
   swagger:
     enabled: ${SWAGGER_ENABLED:false}
+
+  cors:
+    # Comma-separated list of allowed CORS origins.
+    # Leave empty (default) to allow same-origin requests only.
+    # Example: ALLOWED_ORIGINS=https://app.example.com,https://mobile.example.com
+    allowed-origins: ${ALLOWED_ORIGINS:*}
+
   remote-auth:
     enabled: ${REMOTE_AUTH_ENABLED:false}
     create-new-users: ${REMOTE_AUTH_CREATE_NEW_USERS:true}
@@ -30,6 +37,9 @@ server:
     relaxed-query-chars: "[,],%,{,},|"
 
 spring:
+  jackson:
+    deserialization:
+      fail-on-null-for-primitives: false
   servlet:
     multipart:
       enabled: false
@@ -38,6 +48,10 @@ spring:
       request-timeout: 600000
   application:
     name: booklore-api
+  data:
+    web:
+      pageable:
+        max-page-size: 100
   datasource:
     url: ${DATABASE_URL:jdbc:mariadb://${DATABASE_HOST:${DB_HOST:mariadb}}:${DATABASE_PORT:3306}/${DATABASE_NAME:booklore}?createDatabaseIfNotExist=true}
     username: ${DATABASE_USERNAME:root}
@@ -71,11 +85,10 @@ spring:
     locations: classpath:db/migration
 
 springdoc:
-  swagger-ui:
-    path: /api/v1/swagger-ui.html
-    persist-authorization: true
   api-docs:
     path: /api/v1/api-docs
+  swagger-ui:
+    path: /api/v1/swagger-ui.html
 
 logging:
   level:

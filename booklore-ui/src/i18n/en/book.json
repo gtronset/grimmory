@@ -101,7 +101,10 @@
       "deleteBookMessage": "Are you sure you want to delete \"{{ title }}\"?\n\nThis will permanently remove the book file from your filesystem.\n\nThis action cannot be undone.",
       "deleteBookHeader": "Confirm Deletion",
       "deleteFileMessage": "Are you sure you want to delete the additional file \"{{ fileName }}\"?",
-      "deleteFileHeader": "Confirm File Deletion"
+      "deleteFileHeader": "Confirm File Deletion",
+      "largeFileMessage": "This file exceeds 25MB. Some email providers may reject large attachments.\n\nDo you want to send it anyway?",
+      "largeFileHeader": "Large File Warning",
+      "sendAnyway": "Send Anyway"
     },
     "toast": {
       "quickSendSuccessDetail": "The book sending has been scheduled.",
@@ -276,6 +279,7 @@
     "magicShelf": {
       "optionsLabel": "Options",
       "editMagicShelf": "Edit Magic Shelf",
+      "exportJson": "Copy JSON",
       "deleteMagicShelf": "Delete Magic Shelf"
     },
     "confirm": {
@@ -295,6 +299,7 @@
       "shelfDeleteFailedDetail": "Failed to delete shelf",
       "magicShelfDeletedDetail": "Magic shelf was deleted",
       "magicShelfDeleteFailedDetail": "Failed to delete shelf",
+      "magicShelfJsonCopiedDetail": "Magic shelf JSON copied to clipboard",
       "failedSummary": "Failed"
     },
     "loading": {
@@ -430,7 +435,8 @@
     "validationTitleOrIsbn": "Title or ISBN is required",
     "validationReady": "Ready to create",
     "cancelButton": "Cancel",
-    "addButton": "Add Physical Book"
+    "addButton": "Add Physical Book",
+    "fetchMetadataTooltip": "Fetch metadata by ISBN"
   },
   "fileUploader": {
     "title": "Upload Additional File",
@@ -446,6 +452,7 @@
     "statusFailed": "Failed",
     "dragDropText": "Drag and drop a file here to upload.",
     "supportedFormats": "Supported formats: <strong>.pdf</strong>, <strong>.epub</strong>, <strong>.cbz</strong>, <strong>.cbr</strong>, <strong>.cb7</strong>, <strong>.fb2</strong>, <strong>.mobi</strong>, <strong>.azw3</strong>, <strong>.m4b</strong>, <strong>.mp3</strong>",
+    "supplementaryAllFormats": "All file formats are supported for supplementary files.",
     "maxFileSize": "Maximum file size: {{ size }} per file",
     "uploadForBook": "Upload an additional file for <strong>{{ title }}</strong>.",
     "thisBook": "this book",

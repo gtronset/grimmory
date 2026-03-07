@@ -11,22 +11,30 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -38,6 +46,10 @@ public class FileService {
     private final AppProperties appProperties;
     private final RestTemplate restTemplate;
     private final AppSettingService appSettingService;
+    private final RestTemplate noRedirectRestTemplate;
+
+    private static final int MAX_REDIRECTS = 5;
+
 
     private static final double TARGET_COVER_ASPECT_RATIO = 1.5;
     private static final int SMART_CROP_COLOR_TOLERANCE = 30;
@@ -58,6 +70,8 @@ public class FileService {
     private static final String JPEG_MIME_TYPE                = "image/jpeg";
     private static final String PNG_MIME_TYPE                 = "image/png";
     private static final long   MAX_FILE_SIZE_BYTES           = 5L * 1024 * 1024;
+    // 20 MP covers legitimate book covers and author photos with a comfortable safety margin.
+    private static final long   MAX_IMAGE_PIXELS              = 20_000_000L;
     private static final int    THUMBNAIL_WIDTH               = 250;
     private static final int    THUMBNAIL_HEIGHT              = 350;
     private static final int    SQUARE_THUMBNAIL_SIZE         = 250;
@@ -137,6 +151,11 @@ public class FileService {
         return Paths.get(appProperties.getPathConfig(), "tools", "kepubify").toString();
     }
 
+    public String getToolsFfprobePath() {
+        return Paths.get(appProperties.getPathConfig(), "tools", "ffprobe").toString();
+    }
+
+
     // ========================================
     // VALIDATION
     // ========================================
@@ -170,18 +189,34 @@ public class FileService {
         if (imageData == null || imageData.length == 0) {
             throw new IOException("Image data is null or empty");
         }
-        try (InputStream is = new ByteArrayInputStream(imageData)) {
-            BufferedImage image = ImageIO.read(is);
-            if (image != null) {
-                return image;
+
+        try (ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(imageData))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (readers.hasNext()) {
+                ImageReader reader = readers.next();
+                try {
+                    reader.setInput(iis);
+                    int width = reader.getWidth(0);
+                    int height = reader.getHeight(0);
+
+                    long pixelCount = (long) width * height;
+                    if (pixelCount > MAX_IMAGE_PIXELS) {
+                        throw new IOException(String.format("Rejected image: dimensions %dx%d (%d pixels) exceed limit %d — possible decompression bomb",
+                                width, height, pixelCount, MAX_IMAGE_PIXELS));
+                    }
+
+                    return reader.read(0);
+                } finally {
+                    reader.dispose();
+                }
             }
+        } catch (IOException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("ImageIO/TwelveMonkeys decode failed (possibly unsupported format like AVIF/HEIC): {}", e.getMessage());
-            return null;
+            throw new IOException("ImageIO decode failed (possibly unsupported format): " + e.getMessage(), e);
         }
 
-        log.warn("Unable to decode image - likely unsupported format (AVIF, HEIC, or SVG)");
-        return null;
+        throw new IOException("Unable to decode image, likely unsupported format");
     }
 
     public static BufferedImage resizeImage(BufferedImage originalImage, int width, int height) {
@@ -217,29 +252,109 @@ public class FileService {
 
     public BufferedImage downloadImageFromUrl(String imageUrl) throws IOException {
         try {
+            return downloadImageFromUrlInternal(imageUrl);
+        } catch (Exception e) {
+            log.warn("Failed to download image from {}: {}", imageUrl, e.getMessage());
+            if (e instanceof IOException ioException) {
+                throw ioException;
+            }
+            throw new IOException("Failed to download image from " + imageUrl + ": " + e.getMessage(), e);
+        }
+    }
+
+    private BufferedImage downloadImageFromUrlInternal(String imageUrl) throws IOException {
+        String currentUrl = imageUrl;
+        int redirectCount = 0;
+
+        while (redirectCount <= MAX_REDIRECTS) {
+            URI uri = URI.create(currentUrl);
+            if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+                throw new IOException("Only HTTP and HTTPS protocols are allowed");
+            }
+
+            String host = uri.getHost();
+            if (host == null) {
+                throw new IOException("Invalid URL: no host found in " + currentUrl);
+            }
+
+            // Validate resolved IPs to block SSRF against internal networks
+            InetAddress[] inetAddresses = InetAddress.getAllByName(host);
+            if (inetAddresses.length == 0) {
+                throw new IOException("Could not resolve host: " + host);
+            }
+            for (InetAddress inetAddress : inetAddresses) {
+                if (isInternalAddress(inetAddress)) {
+                    throw new SecurityException("URL points to a local or private internal network address: " + host + " (" + inetAddress.getHostAddress() + ")");
+                }
+            }
+
             HttpHeaders headers = new HttpHeaders();
             headers.set(HttpHeaders.USER_AGENT, "BookLore/1.0 (Book and Comic Metadata Fetcher; +https://github.com/booklore-app/booklore)");
             headers.set(HttpHeaders.ACCEPT, "image/*");
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<byte[]> response = restTemplate.exchange(
-                    imageUrl,
+            log.debug("Downloading image from: {}", currentUrl);
+
+            ResponseEntity<byte[]> response = noRedirectRestTemplate.exchange(
+                    currentUrl,
                     HttpMethod.GET,
                     entity,
                     byte[].class
             );
 
-            // Validate and convert
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 return readImage(response.getBody());
+            } else if (response.getStatusCode().is3xxRedirection()) {
+                String location = response.getHeaders().getFirst(HttpHeaders.LOCATION);
+                if (location == null) {
+                    throw new IOException("Redirection response without Location header");
+                }
+                currentUrl = uri.resolve(location).toString();
+                redirectCount++;
             } else {
                 throw new IOException("Failed to download image. HTTP Status: " + response.getStatusCode());
             }
-        } catch (Exception e) {
-            log.error("Failed to download image from URL: {} - {}", imageUrl, e.getMessage());
-            throw new IOException("Failed to download image from URL: " + imageUrl + " - " + e.getMessage(), e);
         }
+
+        throw new IOException("Too many redirects (max " + MAX_REDIRECTS + ")");
+    }
+
+    private boolean isInternalAddress(InetAddress address) {
+        if (address.isLoopbackAddress() || address.isLinkLocalAddress() ||
+            address.isSiteLocalAddress() || address.isAnyLocalAddress()) {
+            return true;
+        }
+
+        byte[] addr = address.getAddress();
+        // Check for IPv6 Unique Local Address (fc00::/7)
+        if (addr.length == 16) {
+            if ((addr[0] & 0xFE) == (byte) 0xFC) {
+                return true;
+            }
+        }
+
+        // Handle IPv4-mapped IPv6 addresses (::ffff:127.0.0.1)
+        if (isIpv4MappedAddress(addr)) {
+            try {
+                byte[] ipv4Bytes = new byte[4];
+                System.arraycopy(addr, 12, ipv4Bytes, 0, 4);
+                InetAddress ipv4Addr = InetAddress.getByAddress(ipv4Bytes);
+                return isInternalAddress(ipv4Addr);
+            } catch (java.net.UnknownHostException e) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isIpv4MappedAddress(byte[] addr) {
+        if (addr.length != 16) return false;
+        for (int i = 0; i < 10; i++) {
+            if (addr[i] != 0) return false;
+        }
+        return (addr[10] == (byte) 0xFF) && (addr[11] == (byte) 0xFF);
     }
 
     // ========================================

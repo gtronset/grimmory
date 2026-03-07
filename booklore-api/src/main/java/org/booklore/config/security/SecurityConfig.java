@@ -6,6 +6,7 @@ import org.booklore.config.security.service.OpdsUserDetailsService;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -26,10 +27,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,7 +45,7 @@ public class SecurityConfig {
 
     private static final Pattern ALLOWED = Pattern.compile("\\s*,\\s*");
     private final OpdsUserDetailsService opdsUserDetailsService;
-    private final DualJwtAuthenticationFilter dualJwtAuthenticationFilter;
+    private final JwtAuthenticationFilter dualJwtAuthenticationFilter;
     private final KoreaderAuthFilter koreaderAuthFilter;
     private final Environment env;
     private final AppProperties appProperties;
@@ -224,6 +224,7 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .referrerPolicy(referrer -> referrer.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .contentTypeOptions(contentType -> {})
                 )
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
@@ -245,6 +246,7 @@ public class SecurityConfig {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                         .referrerPolicy(referrer -> referrer.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .contentTypeOptions(contentType -> {})
                 )
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
@@ -259,15 +261,10 @@ public class SecurityConfig {
 
     @Bean("noRedirectRestTemplate")
     public RestTemplate noRedirectRestTemplate() {
-        return new RestTemplate(
-                new SimpleClientHttpRequestFactory() {
-                    @Override
-                    protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
-                        super.prepareConnection(connection, httpMethod);
-                        connection.setInstanceFollowRedirects(false);
-                    }
-                }
-        );
+        HttpClient httpClient = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
+        return new RestTemplate(new JdkClientHttpRequestFactory(httpClient));
     }
 
     @Bean

@@ -1,7 +1,7 @@
 import {FormsModule} from "@angular/forms";
 import {Button} from "primeng/button";
 import {ActivatedRoute, Router} from "@angular/router";
-import {AsyncPipe, NgClass, NgStyle} from "@angular/common";
+import {AsyncPipe, DecimalPipe, KeyValuePipe, NgClass, NgStyle} from "@angular/common";
 import {filter, finalize, map, switchMap, tap} from "rxjs/operators";
 import {combineLatest, Observable, Subscription} from "rxjs";
 import {Book, BookType, ReadStatus} from "../../model/book.model";
@@ -12,6 +12,7 @@ import {CoverScalePreferenceService} from "../book-browser/cover-scale-preferenc
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from "primeng/tabs";
 import {VirtualScrollerModule} from "@iharbeck/ngx-virtual-scroller";
 import {ProgressSpinner} from "primeng/progressspinner";
+import {ProgressBar} from "primeng/progressbar";
 import {DynamicDialogRef} from "primeng/dynamicdialog";
 import {ConfirmationService, MenuItem, MessageService} from "primeng/api";
 import {UserService} from "../../../settings/user-management/user.service";
@@ -25,7 +26,7 @@ import {AppSettingsService} from "../../../../shared/service/app-settings.servic
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Tooltip} from "primeng/tooltip";
 import {Divider} from "primeng/divider";
-import {Tag} from "primeng/tag";
+import {TagComponent} from "../../../../shared/components/tag/tag.component";
 import {animate, style, transition, trigger} from "@angular/animations";
 import {AfterViewChecked, Component, ElementRef, inject, OnDestroy, ViewChild} from '@angular/core';
 import {BookCardOverlayPreferenceService} from '../book-browser/book-card-overlay-preference.service';
@@ -68,12 +69,15 @@ interface SeriesStats {
   styleUrls: ["./series-page.component.scss"],
   imports: [
     AsyncPipe,
+    DecimalPipe,
+    KeyValuePipe,
     Button,
     FormsModule,
     NgStyle,
     NgClass,
     BookCardComponent,
     ProgressSpinner,
+    ProgressBar,
     Tabs,
     TabList,
     Tab,
@@ -84,7 +88,7 @@ interface SeriesStats {
     Tooltip,
     Divider,
     TranslocoDirective,
-    Tag
+    TagComponent
   ],
   animations: [
     trigger('slideInOut', [
@@ -151,7 +155,7 @@ export class SeriesPageComponent implements OnDestroy, AfterViewChecked {
   ]).pipe(
     map(([seriesName, books]) => {
       const inSeries = books.filter(
-        (b) => b.metadata?.seriesName?.toLowerCase() === seriesName
+        (b) => b.metadata?.seriesName?.trim().toLowerCase() === seriesName
       );
       return inSeries.sort((a, b) => {
         const aNum = a.metadata?.seriesNumber ?? Number.MAX_SAFE_INTEGER;
@@ -507,31 +511,6 @@ export class SeriesPageComponent implements OnDestroy, AfterViewChecked {
     }
   }
 
-  getStatusSeverityClass(status: string | ReadStatus | null | undefined): string {
-    const normalized = (status ?? '').toString().toUpperCase();
-    switch (normalized) {
-      case "UNREAD":
-        return "status-unread";
-      case "READING":
-        return "status-reading";
-      case "READ":
-        return "status-read";
-      case "PARTIALLY_READ":
-        return "status-partially-read";
-      case "PAUSED":
-        return "status-paused";
-      case "RE-READING":
-      case "RE_READING":
-        return "status-rereading";
-      case "ABANDONED":
-        return "status-abandoned";
-      case "WONT_READ":
-        return "status-wont-read";
-      default:
-        return "status-default";
-    }
-  }
-
   getStatusColor(status: string | ReadStatus | null | undefined): string {
     const normalized = (status ?? '').toString().toUpperCase();
     switch (normalized) {
@@ -694,6 +673,11 @@ export class SeriesPageComponent implements OnDestroy, AfterViewChecked {
 
   lockUnlockMetadata(): void {
     this.dialogRef = this.dialogHelperService.openLockUnlockMetadataDialog(this.selectedBooks);
+    if (this.dialogRef) {
+      this.dialogRef.onClose.subscribe(() => {
+        this.deselectAllBooks();
+      });
+    }
   }
 
   autoFetchMetadata(): void {
@@ -709,11 +693,21 @@ export class SeriesPageComponent implements OnDestroy, AfterViewChecked {
   }
 
   bulkEditMetadata(): void {
-    this.dialogHelperService.openBulkMetadataEditDialog(this.selectedBooks);
+    this.dialogRef = this.dialogHelperService.openBulkMetadataEditDialog(this.selectedBooks);
+    if (this.dialogRef) {
+      this.dialogRef.onClose.subscribe(() => {
+        this.deselectAllBooks();
+      });
+    }
   }
 
   multiBookEditMetadata(): void {
-    this.dialogHelperService.openMultibookMetadataEditorDialog(this.selectedBooks);
+    this.dialogRef = this.dialogHelperService.openMultibookMetadataEditorDialog(this.selectedBooks);
+    if (this.dialogRef) {
+      this.dialogRef.onClose.subscribe(() => {
+        this.deselectAllBooks();
+      });
+    }
   }
 
   regenerateCoversForSelected(): void {

@@ -63,7 +63,7 @@ class EpubMetadataWriterTest {
         metadata.setTitle("Test Book");
         AuthorEntity author = new AuthorEntity();
         author.setName("Test Author");
-        metadata.setAuthors(Collections.singleton(author));
+        metadata.setAuthors(Collections.singletonList(author));
 
         bookEntity = new BookEntity();
         LibraryPathEntity libraryPath = new LibraryPathEntity();
@@ -167,7 +167,7 @@ class EpubMetadataWriterTest {
             newMeta.setTitle("Updated Title");
             AuthorEntity author = new AuthorEntity();
             author.setName("Updated Author");
-            newMeta.setAuthors(Collections.singleton(author));
+            newMeta.setAuthors(Collections.singletonList(author));
 
             writer.saveMetadataToFile(epubFile, newMeta, null, new MetadataClearFlags());
             String contentAfterFirstSave = readOpfContent(epubFile);

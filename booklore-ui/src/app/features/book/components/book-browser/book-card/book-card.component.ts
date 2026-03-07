@@ -53,6 +53,7 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isSeriesCollapsed: boolean = false;
   @Input() overlayPreferenceService?: BookCardOverlayPreferenceService;
   @Input() forceEbookMode: boolean = false;
+  @Input() useSquareCovers: boolean = false;
 
   @ViewChild('checkboxElem') checkboxElem!: ElementRef<HTMLInputElement>;
 
@@ -140,7 +141,7 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['book'] || changes['forceEbookMode']) {
+    if (changes['book'] || changes['forceEbookMode'] || changes['useSquareCovers']) {
       this.computeAllMemoizedValues();
       if (changes['book'] && !changes['book'].firstChange && this.menuInitialized) {
         this.additionalFilesLoaded = false;
@@ -452,23 +453,40 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
             label: this.t.translate('book.card.menu.quickSend'),
             icon: 'pi pi-envelope',
             command: () => {
-              this.emailService.emailBookQuick(this.book.id).subscribe({
-                next: () => {
-                  this.messageService.add({
-                    severity: 'info',
-                    summary: this.t.translate('common.success'),
-                    detail: this.t.translate('book.card.toast.quickSendSuccessDetail'),
-                  });
-                },
-                error: (err) => {
-                  const errorMessage = err?.error?.message || this.t.translate('book.card.toast.quickSendErrorDetail');
-                  this.messageService.add({
-                    severity: 'error',
-                    summary: this.t.translate('common.error'),
-                    detail: errorMessage,
-                  });
-                },
-              });
+              const doSend = () => {
+                this.emailService.emailBookQuick(this.book.id).subscribe({
+                  next: () => {
+                    this.messageService.add({
+                      severity: 'info',
+                      summary: this.t.translate('common.success'),
+                      detail: this.t.translate('book.card.toast.quickSendSuccessDetail'),
+                    });
+                  },
+                  error: (err) => {
+                    const errorMessage = err?.error?.message || this.t.translate('book.card.toast.quickSendErrorDetail');
+                    this.messageService.add({
+                      severity: 'error',
+                      summary: this.t.translate('common.error'),
+                      detail: errorMessage,
+                    });
+                  },
+                });
+              };
+
+              if (this.book.primaryFile?.fileSizeKb && this.book.primaryFile.fileSizeKb > 25 * 1024) {
+                this.confirmationService.confirm({
+                  message: this.t.translate('book.card.confirm.largeFileMessage'),
+                  header: this.t.translate('book.card.confirm.largeFileHeader'),
+                  icon: 'pi pi-exclamation-triangle',
+                  acceptLabel: this.t.translate('book.card.confirm.sendAnyway'),
+                  rejectLabel: this.t.translate('common.cancel'),
+                  acceptButtonProps: { severity: 'warn' },
+                  rejectButtonProps: { severity: 'secondary' },
+                  accept: doSend,
+                });
+              } else {
+                doSend();
+              }
             }
           },
             {
@@ -670,6 +688,13 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
       this.router.navigate(['/series', encodedSeriesName]);
     } else {
       this.openBookInfo(this.book);
+    }
+  }
+
+  prepareNavigation(book: Book): void {
+    const allBookIds = this.bookNavigationService.getAvailableBookIds();
+    if (allBookIds.length > 0) {
+      this.bookNavigationService.setNavigationContext(allBookIds, book.id);
     }
   }
 

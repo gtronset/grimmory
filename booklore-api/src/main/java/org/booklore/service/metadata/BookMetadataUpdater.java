@@ -204,6 +204,9 @@ public class BookMetadataUpdater {
         handleFieldUpdate(e.getLubimyczytacRatingLocked(), clear.isLubimyczytacRating(), m.getLubimyczytacRating(), v -> e.setLubimyczytacRating(v), () -> e.getLubimyczytacRating(), replaceMode);
         handleFieldUpdate(e.getRanobedbIdLocked(), clear.isRanobedbId(), m.getRanobedbId(), v -> e.setRanobedbId(nullIfBlank(v)), e::getRanobedbId, replaceMode);
         handleFieldUpdate(e.getRanobedbRatingLocked(), clear.isRanobedbRating(), m.getRanobedbRating(), e::setRanobedbRating, e::getRanobedbRating, replaceMode);
+        handleFieldUpdate(e.getAudibleIdLocked(), clear.isAudibleId(), m.getAudibleId(), v -> e.setAudibleId(nullIfBlank(v)), e::getAudibleId, replaceMode);
+        handleFieldUpdate(e.getAudibleRatingLocked(), clear.isAudibleRating(), m.getAudibleRating(), e::setAudibleRating, e::getAudibleRating, replaceMode);
+        handleFieldUpdate(e.getAudibleReviewCountLocked(), clear.isAudibleReviewCount(), m.getAudibleReviewCount(), e::setAudibleReviewCount, e::getAudibleReviewCount, replaceMode);
         handleFieldUpdate(e.getAgeRatingLocked(), clear.isAgeRating(), m.getAgeRating(), e::setAgeRating, e::getAgeRating, replaceMode);
         handleFieldUpdate(e.getContentRatingLocked(), clear.isContentRating(), m.getContentRating(), v -> e.setContentRating(nullIfBlank(v)), e::getContentRating, replaceMode);
     }
@@ -238,37 +241,45 @@ public class BookMetadataUpdater {
     private void updateAuthorsIfNeeded(BookMetadata m, BookMetadataEntity e, MetadataClearFlags clear, boolean merge, MetadataReplaceMode replaceMode) {
         if (Boolean.TRUE.equals(e.getAuthorsLocked())) return;
 
-        e.setAuthors(Optional.ofNullable(e.getAuthors()).orElseGet(HashSet::new));
+        e.setAuthors(Optional.ofNullable(e.getAuthors()).orElseGet(ArrayList::new));
 
         if (clear.isAuthors()) {
             e.getAuthors().clear();
             return;
         }
 
-        Set<String> authorNames = Optional.ofNullable(m.getAuthors()).orElse(Collections.emptySet());
+        List<String> authorNames = Optional.ofNullable(m.getAuthors()).orElse(Collections.emptyList());
         if (authorNames.isEmpty()) {
             if (replaceMode == MetadataReplaceMode.REPLACE_ALL) e.getAuthors().clear();
             return;
         }
 
-        Set<AuthorEntity> newAuthors = authorNames.stream()
+        List<AuthorEntity> newAuthors = authorNames.stream()
                 .filter(name -> name != null && !name.isBlank())
                 .map(name -> authorRepository.findByName(name)
                         .orElseGet(() -> authorRepository.save(AuthorEntity.builder().name(name).build())))
-                .collect(Collectors.toSet());
+                .toList();
 
         if (newAuthors.isEmpty()) return;
 
         if (replaceMode == MetadataReplaceMode.REPLACE_ALL || replaceMode == MetadataReplaceMode.REPLACE_WHEN_PROVIDED) {
             if (!merge) e.getAuthors().clear();
-            e.getAuthors().addAll(newAuthors);
+            for (AuthorEntity author : newAuthors) {
+                if (!e.getAuthors().contains(author)) {
+                    e.getAuthors().add(author);
+                }
+            }
             e.updateSearchText();
         } else if (replaceMode == MetadataReplaceMode.REPLACE_MISSING && e.getAuthors().isEmpty()) {
             e.getAuthors().addAll(newAuthors);
             e.updateSearchText();
         } else if (replaceMode == null) {
             if (!merge) e.getAuthors().clear();
-            e.getAuthors().addAll(newAuthors);
+            for (AuthorEntity author : newAuthors) {
+                if (!e.getAuthors().contains(author)) {
+                    e.getAuthors().add(author);
+                }
+            }
             e.updateSearchText();
         }
     }

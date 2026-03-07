@@ -1,5 +1,5 @@
 import {Component, inject, OnInit} from '@angular/core';
-import {AbstractControl, FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {AbstractControl, FormArray, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {NgTemplateOutlet} from '@angular/common';
 import {InputText} from 'primeng/inputtext';
@@ -24,6 +24,7 @@ import {BookService} from '../../book/service/book.service';
 import {ShelfService} from '../../book/service/shelf.service';
 import {Shelf} from '../../book/model/shelf.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {TextareaModule} from 'primeng/textarea';
 
 export type RuleOperator =
   | 'equals'
@@ -88,6 +89,9 @@ export type RuleField =
   | 'audibleReviewCount'
   | 'abridged'
   | 'audiobookDuration'
+  | 'audiobookCodec'
+  | 'audiobookChapterCount'
+  | 'audiobookBitrate'
   | 'isPhysical'
   | 'seriesStatus'
   | 'seriesGaps'
@@ -180,6 +184,9 @@ const FIELD_CONFIGS: Record<RuleField, FullFieldConfig> = {
   audibleReviewCount: {label: 'audibleReviewCount', type: 'number'},
   abridged: {label: 'abridged', type: 'boolean'},
   audiobookDuration: {label: 'audiobookDuration', type: 'number'},
+  audiobookCodec: {label: 'audiobookCodec'},
+  audiobookChapterCount: {label: 'audiobookChapterCount', type: 'number'},
+  audiobookBitrate: {label: 'audiobookBitrate', type: 'number'},
   isPhysical: {label: 'isPhysical', type: 'boolean'},
   seriesStatus: {label: 'seriesStatus'},
   seriesGaps: {label: 'seriesGaps'},
@@ -201,7 +208,7 @@ const FIELD_GROUPS: FieldGroup[] = [
   { translationKey: 'ratingsReviews', fields: ['personalRating', 'amazonRating', 'amazonReviewCount', 'goodreadsRating', 'goodreadsReviewCount', 'hardcoverRating', 'hardcoverReviewCount', 'ranobedbRating', 'lubimyczytacRating', 'audibleRating', 'audibleReviewCount'] },
   { translationKey: 'qualityMetadata', fields: ['metadataScore', 'metadataPresence'] },
   { translationKey: 'tagsMoods', fields: ['moods', 'tags'] },
-  { translationKey: 'audiobook', fields: ['narrator', 'abridged', 'audiobookDuration'] },
+  { translationKey: 'audiobook', fields: ['narrator', 'abridged', 'audiobookDuration', 'audiobookCodec', 'audiobookChapterCount', 'audiobookBitrate'] },
   { translationKey: 'fileIdentifiers', fields: ['fileType', 'fileSize', 'isbn13', 'isbn10', 'isPhysical'] }
 ];
 
@@ -224,6 +231,7 @@ const READ_STATUS_KEYS: Record<string, string> = {
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     NgTemplateOutlet,
     InputText,
     Select,
@@ -235,7 +243,8 @@ const READ_STATUS_KEYS: Record<string, string> = {
     CheckboxModule,
     IconDisplayComponent,
     Tooltip,
-    TranslocoDirective
+    TranslocoDirective,
+    TextareaModule
   ]
 })
 export class MagicShelfComponent implements OnInit {
@@ -274,11 +283,15 @@ export class MagicShelfComponent implements OnInit {
   fileType: { label: string; value: string }[] = [
     {label: 'PDF', value: 'pdf'},
     {label: 'EPUB', value: 'epub'},
-    {label: 'CBX', value: 'cbx'},
+    {label: 'CBR', value: 'cbr'},
+    {label: 'CBZ', value: 'cbz'},
+    {label: 'CB7', value: 'cb7'},
     {label: 'FB2', value: 'fb2'},
     {label: 'MOBI', value: 'mobi'},
     {label: 'AZW3', value: 'azw3'},
-    {label: 'Audiobook', value: 'audiobook'}
+    {label: 'M4B', value: 'm4b'},
+    {label: 'M4A', value: 'm4a'},
+    {label: 'MP3', value: 'mp3'}
   ];
 
   get readStatusOptions() {
@@ -343,9 +356,6 @@ export class MagicShelfComponent implements OnInit {
         {label: this.t.translate('magicShelf.metadataFields.publishedDate'), value: 'publishedDate'},
         {label: this.t.translate('magicShelf.metadataFields.language'), value: 'language'},
         {label: this.t.translate('magicShelf.metadataFields.pageCount'), value: 'pageCount'},
-        {label: this.t.translate('magicShelf.metadataFields.hardcoverBookId'), value: 'hardcoverBookId'},
-        {label: this.t.translate('magicShelf.metadataFields.externalUrl'), value: 'externalUrl'},
-        {label: this.t.translate('magicShelf.metadataFields.reviews'), value: 'reviews'},
       ]},
       { label: this.t.translate('magicShelf.metadataFieldGroups.authorsCategories'), items: [
         {label: this.t.translate('magicShelf.metadataFields.authors'), value: 'authors'},
@@ -397,20 +407,6 @@ export class MagicShelfComponent implements OnInit {
         {label: this.t.translate('magicShelf.metadataFields.audiobookDuration'), value: 'audiobookDuration'},
       ]},
       { label: this.t.translate('magicShelf.metadataFieldGroups.comic'), items: [
-        {label: this.t.translate('magicShelf.metadataFields.comicIssueNumber'), value: 'comicIssueNumber'},
-        {label: this.t.translate('magicShelf.metadataFields.comicVolumeName'), value: 'comicVolumeName'},
-        {label: this.t.translate('magicShelf.metadataFields.comicVolumeNumber'), value: 'comicVolumeNumber'},
-        {label: this.t.translate('magicShelf.metadataFields.comicStoryArc'), value: 'comicStoryArc'},
-        {label: this.t.translate('magicShelf.metadataFields.comicStoryArcNumber'), value: 'comicStoryArcNumber'},
-        {label: this.t.translate('magicShelf.metadataFields.comicAlternateSeries'), value: 'comicAlternateSeries'},
-        {label: this.t.translate('magicShelf.metadataFields.comicAlternateIssue'), value: 'comicAlternateIssue'},
-        {label: this.t.translate('magicShelf.metadataFields.comicImprint'), value: 'comicImprint'},
-        {label: this.t.translate('magicShelf.metadataFields.comicFormat'), value: 'comicFormat'},
-        {label: this.t.translate('magicShelf.metadataFields.comicBlackAndWhite'), value: 'comicBlackAndWhite'},
-        {label: this.t.translate('magicShelf.metadataFields.comicManga'), value: 'comicManga'},
-        {label: this.t.translate('magicShelf.metadataFields.comicReadingDirection'), value: 'comicReadingDirection'},
-        {label: this.t.translate('magicShelf.metadataFields.comicWebLink'), value: 'comicWebLink'},
-        {label: this.t.translate('magicShelf.metadataFields.comicNotes'), value: 'comicNotes'},
         {label: this.t.translate('magicShelf.metadataFields.comicCharacters'), value: 'comicCharacters'},
         {label: this.t.translate('magicShelf.metadataFields.comicTeams'), value: 'comicTeams'},
         {label: this.t.translate('magicShelf.metadataFields.comicLocations'), value: 'comicLocations'},
@@ -441,9 +437,8 @@ export class MagicShelfComponent implements OnInit {
     ];
   }
 
-  get opdsSortOptions(): { label: string; value: string | null }[] {
+  get opdsSortOptions() {
     return [
-      {label: this.t.translate('magicShelf.opdsSort.default'), value: null},
       {label: this.t.translate('magicShelf.opdsSort.RECENT'), value: 'RECENT'},
       {label: this.t.translate('magicShelf.opdsSort.TITLE_ASC'), value: 'TITLE_ASC'},
       {label: this.t.translate('magicShelf.opdsSort.TITLE_DESC'), value: 'TITLE_DESC'},
@@ -473,6 +468,8 @@ export class MagicShelfComponent implements OnInit {
   shelfId: number | null = null;
   isAdmin: boolean = false;
   editMode!: boolean;
+  showImportPanel = false;
+  importJson = '';
 
   libraryService = inject(LibraryService);
   shelfService = inject(ShelfService);
@@ -819,13 +816,47 @@ export class MagicShelfComponent implements OnInit {
     this.form.get('isPublic')?.setValue(checked);
   }
 
+  toggleImportPanel() {
+    this.showImportPanel = !this.showImportPanel;
+    if (this.showImportPanel) {
+      this.importJson = '';
+    }
+  }
+
+  applyImportedJson() {
+    const trimmed = this.importJson.trim();
+    if (!trimmed) {
+      this.messageService.add({severity: 'warn', summary: this.t.translate('magicShelf.toast.validationErrorSummary'), detail: this.t.translate('magicShelf.importJson.emptyError')});
+      return;
+    }
+
+    let parsed: GroupRule;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      this.messageService.add({severity: 'error', summary: this.t.translate('magicShelf.toast.errorSummary'), detail: this.t.translate('magicShelf.importJson.parseError')});
+      return;
+    }
+
+    if (parsed.type !== 'group' || !Array.isArray(parsed.rules)) {
+      this.messageService.add({severity: 'error', summary: this.t.translate('magicShelf.toast.errorSummary'), detail: this.t.translate('magicShelf.importJson.structureError')});
+      return;
+    }
+
+    const builtGroup = this.buildGroupFromData(parsed);
+    this.form.setControl('group', builtGroup);
+    this.showImportPanel = false;
+    this.importJson = '';
+    this.messageService.add({severity: 'success', summary: this.t.translate('magicShelf.toast.successSummary'), detail: this.t.translate('magicShelf.importJson.successDetail')});
+  }
+
   submit() {
     if (!this.hasAtLeastOneValidRule(this.group)) {
       this.messageService.add({severity: 'warn', summary: this.t.translate('magicShelf.toast.validationErrorSummary'), detail: this.t.translate('magicShelf.toast.validationErrorDetail')});
       return;
     }
 
-    const value = this.form.value as { name: string | null; icon: string | null; group: GroupRule, isPublic: boolean | null, opdsSort: string | null };
+    const value = this.form.value as { name: string | null; icon: string | null; group: GroupRule, isPublic: boolean | null };
     const cleanedGroup = removeNulls(serializeDateRules(value.group));
 
     this.magicShelfService.saveShelf({
@@ -834,15 +865,18 @@ export class MagicShelfComponent implements OnInit {
       icon: value.icon,
       iconType: this.selectedIcon?.type,
       isPublic: !!value.isPublic,
-      opdsSort: value.opdsSort ?? null,
       group: cleanedGroup
     }).subscribe({
       next: (savedShelf) => {
         this.messageService.add({severity: 'success', summary: this.t.translate('magicShelf.toast.successSummary'), detail: this.t.translate('magicShelf.toast.successDetail')});
         if (savedShelf?.id) {
           this.shelfId = savedShelf.id;
+          this.form.patchValue({
+            name: savedShelf.name,
+            icon: savedShelf.icon,
+            isPublic: savedShelf.isPublic
+          });
         }
-        this.ref.close(savedShelf);
       },
       error: (err) => {
         this.messageService.add({

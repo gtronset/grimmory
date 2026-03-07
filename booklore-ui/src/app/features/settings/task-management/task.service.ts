@@ -3,7 +3,6 @@ import {HttpClient} from '@angular/common/http';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {API_CONFIG} from '../../../core/config/api-config';
 import {MetadataRefreshRequest} from '../../metadata/model/request/metadata-refresh-request.model';
-import {FileHashVerificationRequest} from './file-hash-verification-request.model';
 
 export enum TaskType {
   CLEAR_PDF_CACHE = 'CLEAR_PDF_CACHE',
@@ -36,6 +35,18 @@ export enum MetadataReplaceMode {
 
 export interface LibraryRescanOptions {
   metadataReplaceMode?: MetadataReplaceMode;
+}
+
+export interface FileHashVerificationOptions {
+  dryRun?: boolean;
+  overwriteInitialHash?: boolean;
+}
+
+export interface FileHashVerificationRequest {
+  verificationType: 'BOOKS' | 'LIBRARY';
+  libraryId?: number | null;
+  bookIds?: number[] | null;
+  verificationOptions?: FileHashVerificationOptions;
 }
 
 export interface TaskCreateRequest {
