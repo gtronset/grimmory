@@ -82,6 +82,7 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
   protected _koboProgressPercentage: number | null = null;
   protected _displayTitle: string | undefined = undefined;
   protected _isSeriesViewActive: boolean = false;
+  protected _isSeriesCard: boolean = false;
   protected _coverImageUrl: string = '';
   protected _readStatusIcon: string = '';
   protected _readStatusClass: string = '';
@@ -148,6 +149,7 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
 
     if (changes['seriesViewEnabled'] || changes['isSeriesCollapsed']) {
       this._isSeriesViewActive = this.seriesViewEnabled && !!this.book.seriesCount && this.book.seriesCount >= 1;
+      this._isSeriesCard = this._isSeriesViewActive || (this.isSeriesCollapsed && !!this.book.metadata?.seriesName);
       this._displayTitle = (this.isSeriesCollapsed && this.book.metadata?.seriesName) ? this.book.metadata?.seriesName : this.book.metadata?.title;
       this._titleTooltip = this.t.translate('book.card.alt.titleTooltip', { title: this._displayTitle });
     }
@@ -165,6 +167,7 @@ export class BookCardComponent implements OnInit, OnChanges, OnDestroy {
     this._hasProgress = this._progressPercentage !== null || this._koProgressPercentage !== null || this._koboProgressPercentage !== null;
 
     this._isSeriesViewActive = this.seriesViewEnabled && !!this.book.seriesCount && this.book.seriesCount >= 1;
+    this._isSeriesCard = this._isSeriesViewActive || (this.isSeriesCollapsed && !!this.book.metadata?.seriesName);
     this._displayTitle = (this.isSeriesCollapsed && this.book.metadata?.seriesName)
       ? this.book.metadata?.seriesName
       : this.book.metadata?.title;
