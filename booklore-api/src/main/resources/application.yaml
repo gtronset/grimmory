@@ -87,8 +87,6 @@ spring:
 springdoc:
   api-docs:
     path: /api/v1/api-docs
-  swagger-ui:
-    path: /api/v1/swagger-ui.html
 
 logging:
   level:
