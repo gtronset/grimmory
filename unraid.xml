@@ -23,14 +23,14 @@
         <DonateText>If you find this project useful, consider supporting development!</DonateText>
         <DonateLink>https://opencollective.com/grimmory</DonateLink>
     </Maintainer>
-    <Requires/>
     <Screenshots>
         <Screenshot>https://raw.githubusercontent.com/grimmory-tools/grimmory/main/assets/demo.gif</Screenshot>
     </Screenshots>
     <Network>bridge</Network>
+    <Requires>MariaDB is required. See additional installation instructions at the project repo: https://github.com/grimmory-tools/grimmory/issues</Requires>
     <Config Name="Web UI Host Port" Target="6060" Default="6060" Mode="tcp" Description="Port for Grimmory's web interface." Type="Port" Display="always" Required="true" Mask="false">6060</Config>
     <Config Name="Config Location" Target="/app/data" Default="/mnt/user/appdata/grimmory" Mode="rw" Description="Persistent config files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/grimmory</Config>
-    <Config Name="Book Library" Target="/books" Default="/mnt/user/data/media/books" Mode="rw" Description="Your ebook/audiobook library" Type="Path" Display="always" Required="true" Mask="false"/>
+    <Config Name="Book Library" Target="/data/media/books" Default="/mnt/user/data/media/books" Mode="rw" Description="Your ebook/audiobook library. This is currently set up to support hardlinks, if your server is already set to use them." Type="Path" Display="always" Required="true" Mask="false"/>
     <Config Name="Book-Drop Location" Target="/bookdrop" Default="/mnt/user/data/media/bookdrop" Mode="rw" Description="Location of a watched folder where Grimmory can detect, enrich, and queue books for import automatically." Type="Path" Display="always" Required="true" Mask="false"/>
     <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="jdbc:mariadb://mariadb:3306/grimmory" Mode="" Description="MariaDB Database connection URL. You must ensure the database is accessible from the container (ex: replace `mariadb` with the DB container's IP/hostname)." Type="Variable" Display="always" Required="true" Mask="false"/>
     <Config Name="DATABASE_USERNAME" Target="DATABASE_USERNAME" Default="grimmory" Mode="" Description="MariaDB Database username" Type="Variable" Display="always" Required="true" Mask="false"/>
